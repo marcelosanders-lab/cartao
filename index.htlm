@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Marcelo Sanberg — Advogado</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { min-height: 100dvh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #e8f5e9 0%, #e3f2fd 100%); font-family: 'Inter', sans-serif; padding: 1.5rem; }
+  .card { background: #fff; border-radius: 1.5rem; box-shadow: 0 8px 32px rgba(0,0,0,0.14); width: 100%; max-width: 400px; overflow: hidden; text-align: center; }
+  .card-header { background: linear-gradient(135deg, #128C7E 0%, #25D366 100%); padding: 2.5rem 2rem 4rem; position: relative; }
+  .card-header::after { content: ''; position: absolute; bottom: -1.5rem; left: 0; right: 0; height: 3rem; background: #fff; border-radius: 50% 50% 0 0 / 100% 100% 0 0; }
+  .avatar { width: 96px; height: 96px; border-radius: 50%; border: 4px solid rgba(255,255,255,0.9); background: #01696f; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; font-weight: 700; color: #fff; margin: 0 auto; box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+  .card-body { padding: 2rem 2rem 2.5rem; }
+  .name { font-size: 1.5rem; font-weight: 700; color: #111b21; margin-bottom: 0.25rem; }
+  .role { font-size: 0.85rem; color: #667781; font-weight: 500; margin-bottom: 1.5rem; letter-spacing: 0.04em; text-transform: uppercase; }
+  .divider { height: 1px; background: #e9ecef; margin: 1.25rem 0; }
+  .info-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; text-align: left; }
+  .info-icon { width: 36px; height: 36px; border-radius: 50%; background: #f0fdf4; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .info-icon svg { width: 18px; height: 18px; }
+  .info-label { font-size: 0.72rem; color: #667781; line-height: 1; margin-bottom: 0.2rem; }
+  .info-value { font-size: 0.95rem; font-weight: 600; color: #111b21; }
+  .btn-whatsapp { display: flex; align-items: center; justify-content: center; gap: 0.6rem; width: 100%; padding: 0.9rem 1.5rem; background: linear-gradient(135deg, #25D366, #128C7E); color: #fff; font-size: 1rem; font-weight: 600; border: none; border-radius: 9999px; cursor: pointer; text-decoration: none; margin-top: 1.5rem; box-shadow: 0 4px 14px rgba(37,211,102,0.35); transition: transform 150ms ease, box-shadow 150ms ease; }
+  .btn-whatsapp:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(37,211,102,0.45); }
+  .btn-whatsapp svg { width: 22px; height: 22px; }
+  .footer-note { font-size: 0.72rem; color: #adb5bd; margin-top: 1rem; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="card-header"><div class="avatar">MS</div></div>
+  <div class="card-body">
+    <h1 class="name">Marcelo Sanberg</h1>
+    <p class="role">Advogado &amp; Servidor Público</p>
+    <div class="divider"></div>
+    <div class="info-row">
+      <div class="info-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#128C7E" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></div>
+      <div><div class="info-label">Área</div><div class="info-value">Direito Público e Civil</div></div>
+    </div>
+    <div class="info-row">
+      <div class="info-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#128C7E" stroke-width="2"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 0 1-2.827 0l-4.244-4.243a8 8 0 1 1 11.314 0z"/><circle cx="12" cy="11" r="3"/></svg></div>
+      <div><div class="info-label">Localização</div><div class="info-value">Rio Grande do Sul, BR</div></div>
+    </div>
+    <div class="divider"></div>
+    <a href="https://wa.me/5551984226716" class="btn-whatsapp" target="_blank" rel="noopener noreferrer">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.657 1.438 5.168L2 22l4.978-1.31A9.944 9.944 0 0 0 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18a8 8 0 0 1-4.079-1.118l-.292-.174-3.038.8.813-2.965-.19-.304A7.952 7.952 0 0 1 4 12c0-4.418 3.582-8 8-8s8 3.582 8 8-3.582 8-8 8z"/></svg>
+      Enviar mensagem no WhatsApp
+    </a>
+    <p class="footer-note">Toque para iniciar uma conversa</p>
+  </div>
+</div>
+</body>
+</html>
