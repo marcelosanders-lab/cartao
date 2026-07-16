@@ -1,0 +1,92 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sanberg — Template de Petição</title>
+<style>doc-page:not(:defined){visibility:hidden}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=Space+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0E2A45;--navy-deep:#081726;--gold:#C19A4B;--gold-bright:#D4B26A;--ink:#14191E;--grey:#5C666D;--hairline:#D9D5CB;--paper:#F7F5EF}
+*{box-sizing:border-box}
+body{margin:0;background:#e8e6df;font-family:'Space Grotesk',sans-serif;color:var(--ink)}
+doc-page{--font-body:'Space Grotesk',sans-serif}
+h1,h2,h3{font-family:'Spectral',serif;font-weight:600;margin:0}
+.doc-header{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--gold);padding-bottom:14px}
+.doc-header .brand{display:flex;align-items:center;gap:10px}
+.doc-header .brand .wm{font-family:'Spectral',serif;font-weight:600;font-size:19px;color:var(--navy);line-height:1}
+.doc-header .brand .sub{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.28em;color:var(--gold);text-transform:uppercase;margin-top:4px}
+.doc-header .meta{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;color:var(--grey);text-align:right;line-height:1.7}
+.doc-footer{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--hairline);padding-top:10px;font-family:'IBM Plex Mono',monospace;font-size:7.5px;letter-spacing:.1em;color:var(--grey)}
+.doc-footer .page-no::after{content:counter(page)}
+.court-heading{text-align:center;font-family:'Spectral',serif;font-weight:600;font-size:13pt;line-height:1.5;text-transform:uppercase;margin:28px 0 20px}
+.case-line{font-family:'IBM Plex Mono',monospace;font-size:9.5pt;color:var(--navy);text-align:center;margin-bottom:26px;letter-spacing:.02em}
+.section-title{font-family:'Spectral',serif;font-weight:600;font-size:12.5pt;color:var(--navy);border-bottom:1px solid var(--hairline);padding-bottom:6px;margin:26px 0 14px}
+p.body-p{font-size:11pt;line-height:1.85;text-align:justify;margin:0 0 14px;color:#242b31}
+.parties{font-size:11pt;line-height:1.9;margin-bottom:8px}
+.parties b{font-family:'Space Grotesk',sans-serif;font-weight:600;color:var(--navy)}
+.closing{margin-top:40px;text-align:center}
+.closing .place-date{font-size:11pt;margin-bottom:52px}
+.closing .sig-line{width:280px;margin:0 auto;border-top:1px solid var(--ink);padding-top:8px;font-size:10pt}
+.closing .sig-line .nm{font-weight:600}
+.closing .sig-line .oab{font-family:'IBM Plex Mono',monospace;font-size:8.5pt;color:var(--grey);margin-top:2px}
+ol.pedidos{font-size:11pt;line-height:1.85;padding-left:22px;margin:0}
+ol.pedidos li{margin-bottom:8px}
+.watermark-corner{position:absolute;opacity:.05;pointer-events:none}
+@media print{.watermark-corner{opacity:.04}}
+</style>
+</head>
+<body>
+<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 56"><rect width="80" height="56" fill="#0E2A45"/><text x="40" y="33" fill="#C19A4B" font-size="16" font-family="Georgia" text-anchor="middle">S</text></svg></template>
+
+<doc-page size="a4" orientation="portrait" margin="1in">
+<div slot="header" class="doc-header">
+  <div class="brand">
+    <svg width="30" height="30" viewBox="0 0 64 64"><rect x="24" y="11" width="28" height="8" rx="4" fill="#0E2A45"/><rect x="14" y="28" width="36" height="8" rx="4" fill="#C19A4B"/><rect x="12" y="45" width="28" height="8" rx="4" fill="#0E2A45"/><circle cx="50" cy="15" r="4" fill="#C19A4B"/><circle cx="14" cy="49" r="4" fill="#C19A4B"/></svg>
+    <div><div class="wm">Sanberg</div><div class="sub">Soluções Jurídicas</div></div>
+  </div>
+  <div class="meta">OAB/RS 000.000<br>PORTO ALEGRE / RS</div>
+</div>
+
+<div slot="footer" class="doc-footer">
+  <span>AV. BORGES DE MEDEIROS 1200 · 14º · PORTO ALEGRE/RS</span>
+  <span>+55 51 3000 0000 · sanberg.adv.br</span>
+  <span>Página <span class="page-no"></span></span>
+</div>
+
+<div class="court-heading">Excelentíssimo(a) Senhor(a) Doutor(a) Juiz(a) de Direito<br>da ___ Vara Cível da Comarca de Porto Alegre/RS</div>
+<div class="case-line">Processo nº 0000000-00.0000.0.00.0000</div>
+
+<p class="parties"><b>[NOME DO(A) AUTOR(A)]</b>, [qualificação: nacionalidade, estado civil, profissão], portador(a) do CPF nº [000.000.000-00], residente e domiciliado(a) em [endereço completo], vem, respeitosamente, à presença de Vossa Excelência, por meio de seu(sua) advogado(a) que esta subscreve (procuração anexa), propor a presente</p>
+
+<h1 style="text-align:center;font-size:14pt;margin:22px 0;text-transform:uppercase">[Nome da Ação/Peça]</h1>
+
+<p class="parties">em face de <b>[NOME DO(A) RÉU(RÉ)]</b>, [qualificação], pelos fatos e fundamentos jurídicos a seguir expostos.</p>
+
+<div class="section-title">I — Dos Fatos</div>
+<p class="body-p">[Narrativa fática do caso — descrever cronologicamente os eventos relevantes que fundamentam o pedido, com referência aos documentos anexos quando aplicável.]</p>
+
+<div class="section-title">II — Do Direito</div>
+<p class="body-p">[Fundamentação jurídica — dispositivos legais, doutrina e jurisprudência aplicáveis ao caso concreto.]</p>
+
+<div class="section-title">III — Dos Pedidos</div>
+<p class="body-p">Ante o exposto, requer-se:</p>
+<ol class="pedidos">
+  <li>[Pedido principal];</li>
+  <li>A citação/intimação da parte contrária para, querendo, apresentar resposta;</li>
+  <li>A produção de todas as provas em direito admitidas;</li>
+  <li>A condenação da parte ré ao pagamento das custas processuais e honorários advocatícios.</li>
+</ol>
+
+<p class="body-p" style="margin-top:20px">Dá-se à causa o valor de R$ [valor].</p>
+<p class="body-p">Nestes termos, pede deferimento.</p>
+
+<div class="closing">
+  <div class="place-date">Porto Alegre, [dia] de [mês] de [ano].</div>
+  <div class="sig-line">
+    <div class="nm">Dra. Helena Sanberg</div>
+    <div class="oab">OAB/RS 000.000</div>
+  </div>
+</div>
+
+</doc-page>
+<script src="doc-page.js"></script>
+</body></html>
