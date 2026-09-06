@@ -20,7 +20,9 @@ os.environ.setdefault("PYMUPDF_SUGGEST_LAYOUT_ANALYZER", "0")
 #        Cache keys now include no_images flag to avoid contamination
 # 3.3.0: Image paths in cached markdown now use relative 'images/' prefix
 #        (fixes broken temp directory references in cached output)
-EXTRACTOR_VERSION = "3.3.0"
+# 3.4.0: image_path convertido para str antes de ir ao pymupdf4llm
+#        (Path quebrava a extracao em qualquer PDF com imagens)
+EXTRACTOR_VERSION = "3.4.0"
 
 
 def check_docling_models():
@@ -65,7 +67,10 @@ def extract_pdf_fast(
         show_progress=show_progress,
         table_strategy="text",  # Better for mixed table types
         write_images=image_dir is not None,
-        image_path=image_dir,
+        # str() obrigatorio: pymupdf4llm chama .strip() em image_path e
+        # quebra com AttributeError se receber Path. So aparece em PDF que
+        # de fato contem imagens.
+        image_path=str(image_dir) if image_dir is not None else None,
     )
 
     # Replace pymupdf4llm's default page separator with explicit sentinel.
