@@ -119,21 +119,43 @@ def carregar_velas(caminho, tf):
     vela aberta muda sozinho ate o fechamento e nao e reproduzivel. O fechamento
     dessa vela aberta e usado apenas como preco de referencia atual.
     """
-    with open(caminho) as fh:
-        bruto = json.load(fh)
-    dados = bruto.get("data", bruto) if isinstance(bruto, dict) else bruto
-    if not isinstance(dados, list) or not dados:
-        raise ValueError(f"{caminho}: sem velas")
-    velas = []
-    for v in dados:
-        velas.append({
-            "t": v["timestamp"],
-            "o": float(v["open"]),
-            "h": float(v["high"]),
-            "l": float(v["low"]),
-            "c": float(v["close"]),
-            "vusd": float(v.get("volume_usd") or 0.0),
-        })
+    texto = open(caminho).read().strip()
+    if not texto:
+        raise ValueError(f"{caminho}: arquivo vazio")
+
+    if texto[0] in "{[":
+        # JSON bruto do MCP, copiado sem alteracao
+        bruto = json.loads(texto)
+        dados = bruto.get("data", bruto) if isinstance(bruto, dict) else bruto
+        if not isinstance(dados, list) or not dados:
+            raise ValueError(f"{caminho}: sem velas")
+        velas = [{"t": v["timestamp"], "o": float(v["open"]), "h": float(v["high"]),
+                  "l": float(v["low"]), "c": float(v["close"]),
+                  "vusd": float(v.get("volume_usd") or 0.0)} for v in dados]
+    else:
+        # CSV compacto: timestamp,open,high,low,close,volume_usd (uma vela por linha)
+        velas = []
+        for n, linha in enumerate(texto.splitlines(), 1):
+            linha = linha.strip()
+            if not linha or linha.startswith("#"):
+                continue
+            campos = linha.split(",")
+            if len(campos) != 6:
+                raise ValueError(
+                    f"{caminho}: linha {n} tem {len(campos)} campos, esperava 6 "
+                    f"(timestamp,open,high,low,close,volume_usd): {linha!r}")
+            t, o, h, l, c, vusd = campos
+            velas.append({"t": t.strip(), "o": float(o), "h": float(h),
+                          "l": float(l), "c": float(c), "vusd": float(vusd)})
+        if not velas:
+            raise ValueError(f"{caminho}: sem velas")
+
+    # coerencia basica: high tem de ser o maior e low o menor da vela
+    for v in velas:
+        if not (v["h"] >= max(v["o"], v["c"]) and v["l"] <= min(v["o"], v["c"])):
+            raise ValueError(
+                f"{caminho}: vela {v['t']} inconsistente "
+                f"(o={v['o']} h={v['h']} l={v['l']} c={v['c']}) - erro de transcricao")
     velas.sort(key=lambda x: x["t"])
     preco_atual = velas[-1]["c"]
 
@@ -250,9 +272,11 @@ def avaliar(par, d1, h4, regime_btc, janela):
                 pv(1, "MACD diario perdendo forca")
 
     # gatilho de 4h
+    gatilho_4h_alta = False
     if h4:
         if cruzou_para_cima(h4["ema_rapida_serie"], h4["ema_lenta_serie"]):
             pc(2, f"cruzamento de alta no 4h nas ultimas {CRUZAMENTO_JANELA} velas")
+            gatilho_4h_alta = True
         if cruzou_para_baixo(h4["ema_rapida_serie"], h4["ema_lenta_serie"]):
             pv(2, f"cruzamento de baixa no 4h nas ultimas {CRUZAMENTO_JANELA} velas")
 
@@ -292,9 +316,10 @@ def avaliar(par, d1, h4, regime_btc, janela):
     else:
         sinal = "NEUTRO"
 
-    # As 11h a vela diaria fechada e a mesma da leitura das 22h: qualquer sinal
-    # novo pela manha nasce so do gatilho de 4h e vale menos.
-    if janela == "manha" and sinal == "COMPRA":
+    # As 11h a vela diaria fechada e a mesma da leitura das 22h. So marca
+    # "gatilho 4h" o sinal que de fato veio de um cruzamento no prazo curto -
+    # o resto e a mesma tendencia diaria de ontem, sem novidade.
+    if janela == "manha" and sinal == "COMPRA" and gatilho_4h_alta:
         sinal = "COMPRA (gatilho 4h)"
 
     res = {
@@ -348,6 +373,16 @@ def montar_relatorio(resultados, regime, janela, fora_da_fonte, nao_coletadas, s
     L = [f"# Radar de cripto - {agora} (horario de Brasilia)", "",
          f"**{titulo}**", "",
          f"Regime do BTC: **{regime.upper()}**  |  Fonte de precos: Crypto.com Exchange", ""]
+
+    avaliados = [r for r in resultados if r["sinal"] != "DADOS INSUFICIENTES"]
+    compras = [r for r in avaliados if r["sinal"].startswith("COMPRA")]
+    if avaliados and len(compras) / len(avaliados) >= 0.6:
+        L += [f"> **Atencao: {len(compras)} de {len(avaliados)} pares deram COMPRA.** "
+              "Quando quase tudo dispara junto, o radar nao esta escolhendo moeda - "
+              "esta so dizendo que o mercado inteiro esta acima da media. "
+              "Isso e leitura de regime, nao selecao. Comprar os 20 e comprar o "
+              "mercado com 20 taxas; se for operar, escolha por criterio proprio "
+              "(liquidez, conviccao, tamanho de posicao) e nao pela lista inteira.", ""]
 
     acoes = [r for r in resultados if r["sinal"] not in ("NEUTRO", "DADOS INSUFICIENTES")]
     if acoes:
@@ -427,14 +462,20 @@ def main():
     d1, h4 = {}, {}
     sem_arquivo, sem_4h = [], []
     for par in pares:
-        f1 = os.path.join(args.dir, f"{par}_1d.json")
-        f4 = os.path.join(args.dir, f"{par}_4h.json")
-        if not os.path.exists(f1):
+        def achar(sufixo):
+            for ext in (".json", ".csv"):
+                caminho = os.path.join(args.dir, f"{par}_{sufixo}{ext}")
+                if os.path.exists(caminho):
+                    return caminho
+            return None
+
+        f1, f4 = achar("1d"), achar("4h")
+        if not f1:
             sem_arquivo.append(par)
             continue
         velas1, preco_1d = carregar_velas(f1, "1d")
         preco_atual = preco_1d          # fechamento da vela diaria em formacao
-        if os.path.exists(f4):
+        if f4:
             velas4, preco_4h = carregar_velas(f4, "4h")
             h4[par] = indicadores(velas4)
             preco_atual = preco_4h      # o 4h e mais recente, entao tem prioridade

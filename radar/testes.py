@@ -101,7 +101,7 @@ velas = []
 for i in range(30, -1, -1):                       # de 30 dias atras ate hoje
     t = hoje - timedelta(days=i)
     velas.append({"timestamp": t.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                  "open": "10", "high": "11", "low": "9",
+                  "open": str(100 + i), "high": str(101 + i), "low": str(99 + i),
                   "close": str(100 + i), "volume": "1", "volume_usd": "1000000"})
 velas.reverse()                                    # MCP devolve do mais novo p/ o mais antigo
 with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as fh:
@@ -137,6 +137,40 @@ v_magro = A.avaliar("TESTE_USDT", magro, None, "neutro", "noite")
 checar_bool("volume baixo vira alerta", v_magro["liquidez_ok"] is False, True)
 checar_bool("alerta aparece nos motivos",
             any("ALERTA" in m for m in v_magro["motivos"]), True)
+
+# --- formato CSV compacto ---------------------------------------------------
+csv = "\n".join(f"2026-07-{d:02d}T00:00:00Z,10,11,9,10.5,1000" for d in range(1, 20))
+with tempfile.NamedTemporaryFile("w", suffix=".csv", delete=False) as fh:
+    fh.write(csv)
+    caminho_csv = fh.name
+v_csv, p_csv = A.carregar_velas(caminho_csv, "1d")
+os.unlink(caminho_csv)
+checar_bool("le CSV compacto", len(v_csv) == 19, True)
+checar("preco atual do CSV", p_csv, 10.5)
+
+# vela impossivel (fechamento acima da maxima) tem de ser rejeitada
+with tempfile.NamedTemporaryFile("w", suffix=".csv", delete=False) as fh:
+    fh.write("2026-07-01T00:00:00Z,10,10.2,9,10.5,1000")
+    caminho_ruim = fh.name
+try:
+    A.carregar_velas(caminho_ruim, "1d")
+    rejeitou = False
+except ValueError:
+    rejeitou = True
+os.unlink(caminho_ruim)
+checar_bool("rejeita vela inconsistente", rejeitou, True)
+
+# numero errado de colunas tem de ser rejeitado
+with tempfile.NamedTemporaryFile("w", suffix=".csv", delete=False) as fh:
+    fh.write("2026-07-01T00:00:00Z,10,11,9,10.5")
+    caminho_curto = fh.name
+try:
+    A.carregar_velas(caminho_curto, "1d")
+    rejeitou_curto = False
+except ValueError:
+    rejeitou_curto = True
+os.unlink(caminho_curto)
+checar_bool("rejeita linha com colunas faltando", rejeitou_curto, True)
 
 print()
 if falhas:

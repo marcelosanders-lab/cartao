@@ -92,3 +92,22 @@ opera de fato. Confira esses no seu gráfico antes de agir.
   tendência perde: ele entra no rompimento e sai no repique. O retorno vem de
   poucas operações grandes, e só se você respeitar o stop nas outras.
 - **Não é recomendação de investimento.**
+
+## Diagnóstico de seletividade
+
+Quando 60% ou mais dos pares avaliados disparam COMPRA na mesma leitura, o
+relatório abre com um aviso. O motivo é direto: um sistema que compra quase tudo
+não está escolhendo moeda, está apenas informando que o mercado inteiro está
+acima da média móvel. Isso é leitura de regime, não seleção.
+
+Foi o que aconteceu na primeira leitura completa (06/09/2026): **23 de 28 pares
+deram COMPRA**. O sinal ali não distingue nada — todas as 28 moedas subiram
+junto desde a virada de 19/08. Agir sobre a lista inteira é comprar o mercado
+pagando 23 taxas de corretagem e assumindo 23 stops.
+
+Isso é uma limitação estrutural de qualquer sistema de seguimento de tendência
+aplicado a uma cesta correlacionada, não um defeito de implementação. A correção
+não é mexer nos pesos até a lista encurtar — isso seria ajustar a régua ao
+resultado. A correção é sua: escolher entre os sinais por critério que o radar
+não tem (liquidez real na sua corretora, convicção na tese, tamanho de posição)
+e aceitar que em mercado de alta generalizada o radar não agrega seleção.
