@@ -172,6 +172,46 @@ except ValueError:
 os.unlink(caminho_curto)
 checar_bool("rejeita linha com colunas faltando", rejeitou_curto, True)
 
+# --- portao de risco/retorno no preco atual ------------------------------------
+# Stop e alvo saem do fechamento diario. Se o preco ja correu depois desse
+# fechamento, o 2:1 anunciado nao existe mais para quem entra agora.
+def _serie_compra(atual):
+    """Alta firme + lateralizacao: gera COMPRA limpa (RSI ~68), sem exaustao."""
+    import math
+    base = [100.0 + i * 1.5 for i in range(26)]
+    topo = base[-1]
+    base += [topo + 1.5 * math.sin(i * 1.1) - i * 0.15 for i in range(15)]
+    velas = [{"t": f"2026-01-{i+1:02d}T00:00:00Z", "o": p, "h": p * 1.012,
+              "l": p * 0.988, "c": p, "vusd": 5_000_000} for i, p in enumerate(base)]
+    return base, A.indicadores(velas, atual)
+
+_base, _d = _serie_compra(None)
+_fech = _base[-1]
+_stop = _fech - A.STOP_ATR * _d["atr"]
+_alvo = _fech + A.ALVO_RR * (_fech - _stop)
+
+def _sinal_com_preco(atual):
+    return A.avaliar("X_USDT", _serie_compra(atual)[1], None, "alta", "noite")
+
+_r = _sinal_com_preco(_fech)
+checar_bool("no fechamento o sinal e COMPRA", _r["sinal"] == "COMPRA", True)
+checar("R:R no fechamento e 2:1", _r["rr_real"], 2.0, tol=1e-9)
+
+# a 5% do caminho ate o alvo o R:R cai para ~1,73 - ainda acima do minimo
+checar_bool("avanco pequeno mantem a COMPRA",
+            _sinal_com_preco(_fech + 0.05 * (_alvo - _fech))["sinal"] == "COMPRA", True)
+# a 10% do caminho o R:R bate exatamente no minimo de 1,5:1 e o sinal cai
+checar_bool("avanco de 15% bloqueia por R:R",
+            _sinal_com_preco(_fech + 0.15 * (_alvo - _fech))["sinal"] == "SEM ENTRADA (R:R baixo)", True)
+checar_bool("preco no alvo vira ALVO JA ALCANCADO",
+            _sinal_com_preco(_alvo)["sinal"] == "ALVO JA ALCANCADO", True)
+checar_bool("preco acima do alvo tambem",
+            _sinal_com_preco(_alvo * 1.02)["sinal"] == "ALVO JA ALCANCADO", True)
+checar_bool("preco abaixo do stop vira ABAIXO DO STOP",
+            _sinal_com_preco(_stop * 0.98)["sinal"] == "ABAIXO DO STOP", True)
+checar_bool("o bloqueio aparece nos motivos",
+            any("BLOQUEIO" in m for m in _sinal_com_preco(_alvo)["motivos"]), True)
+
 print()
 if falhas:
     print(f"{len(falhas)} FALHA(S): " + ", ".join(falhas))

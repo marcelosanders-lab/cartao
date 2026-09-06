@@ -111,3 +111,36 @@ não é mexer nos pesos até a lista encurtar — isso seria ajustar a régua ao
 resultado. A correção é sua: escolher entre os sinais por critério que o radar
 não tem (liquidez real na sua corretora, convicção na tese, tamanho de posição)
 e aceitar que em mercado de alta generalizada o radar não agrega seleção.
+
+## Portão de risco/retorno no preço atual
+
+Stop e alvo nascem do **fechamento diário**. Quando o preço corre depois desse
+fechamento — e ele corre, porque a vela leva até 24h para fechar — o 2:1
+anunciado deixa de existir para quem entra agora: o risco por unidade cresce e o
+alvo encolhe. O sistema passa a recalcular a relação sobre o preço atual e
+bloqueia o sinal quando ela cai abaixo de **1,5:1**:
+
+| Situação no preço atual | Sinal vira |
+|---|---|
+| Preço já no alvo ou acima | `ALVO JA ALCANCADO` |
+| R:R real abaixo de 1,5:1 | `SEM ENTRADA (R:R baixo)` |
+| Preço já abaixo do stop | `ABAIXO DO STOP` |
+
+A matemática é fechada: avançar uma fração *x* do caminho até o alvo leva a
+relação para `2(1−x) ÷ (1+2x)`. Em 10% do caminho ela já bate 1,5:1. Ou seja,
+**o sinal tem prazo de validade curto** — quem lê o relatório horas depois do
+fechamento da vela precisa que o motor diga isso, não que repita um 2:1 que
+morreu.
+
+O caso que motivou a regra, na leitura de 06/09/2026: **JUP** entrou como COMPRA
+com alvo em 0,26852 enquanto já era negociada a 0,26823. Comprar ali significava
+arriscar 0,0700 para ganhar 0,0003 — **0,00:1**. O sistema anunciava 2:1.
+
+Efeito colateral bem-vindo: o portão fez a seleção que a pontuação não fazia. Na
+mesma leitura, 23 dos 28 pares davam COMPRA; com o portão, 14 caem e sobram 9.
+A diferença é que a régua aqui não foi ajustada para encurtar a lista — 1,5:1 é o
+piso abaixo do qual seguimento de tendência não paga a taxa de acerto do método.
+
+Um aviso sobre ler a coluna: **R:R que melhora porque o preço caiu não é notícia
+boa.** LPT subiu de 2,00 para 2,86 apenas por ter recuado 2,85% em direção ao
+stop.

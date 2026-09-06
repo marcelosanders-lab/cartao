@@ -31,6 +31,7 @@ ESTICADO_PCT = 0.15          # 15% acima da EMA21 diaria = preco esticado
 CRUZAMENTO_JANELA = 3        # cruzamento vale por N velas de 4h
 STOP_ATR = 1.5               # stop = 1.5 x ATR14 diario
 ALVO_RR = 2.0                # alvo = 2x o risco
+RR_MINIMO = 1.5              # R:R minimo no preco atual para o sinal valer entrada
 LIQUIDEZ_MINIMA_USD = 50_000 # media diaria de volume em USD na fonte
 SCORE_COMPRA = 6
 SCORE_VENDA = 5
@@ -335,9 +336,31 @@ def avaliar(par, d1, h4, regime_btc, janela):
     if d1["atr"]:
         if sinal.startswith("COMPRA"):
             stop = preco - STOP_ATR * d1["atr"]
+            alvo = preco + ALVO_RR * (preco - stop)
             res["stop"] = stop
-            res["alvo"] = preco + ALVO_RR * (preco - stop)
+            res["alvo"] = alvo
             res["invalidacao"] = f"fechamento diario abaixo de {stop:.8g}"
+
+            # Stop e alvo nascem do fechamento diario. Quando o preco ja correu
+            # depois desse fechamento, o 2:1 vira ficcao: o risco por unidade
+            # cresce e o alvo encolhe. Quem entra, entra ao preco de agora - e e
+            # esse R:R que decide se ainda existe operacao.
+            atual = res["preco_atual"]
+            if atual > stop:
+                rr = (alvo - atual) / (atual - stop)
+                res["rr_sinal"] = ALVO_RR
+                res["rr_real"] = rr
+                if rr < RR_MINIMO:
+                    res["sinal"] = sinal = (
+                        "ALVO JA ALCANCADO" if rr <= 0 else "SEM ENTRADA (R:R baixo)")
+                    res["motivos"].append(
+                        f"BLOQUEIO: comprando a {atual:.8g} o risco/retorno cai para "
+                        f"{rr:.2f}:1, abaixo do minimo de {RR_MINIMO}:1 - o stop e o alvo "
+                        f"foram calculados sobre o fechamento de {preco:.8g}")
+            else:
+                res["sinal"] = sinal = "ABAIXO DO STOP"
+                res["motivos"].append(
+                    f"BLOQUEIO: preco atual {atual:.8g} ja esta abaixo do stop {stop:.8g}")
         elif sinal in ("VENDA", "REALIZAR PARCIAL"):
             res["reentrada"] = f"reavaliar apenas com fechamento diario acima de {ema21:.8g}"
     return res
@@ -366,8 +389,9 @@ def montar_relatorio(resultados, regime, janela, fora_da_fonte, nao_coletadas, s
               if janela == "noite" else
               "Leitura das 11h - a vela diaria fechada e a MESMA de ontem as 22h; "
               "so o grafico de 4h mudou")
-    ordem = {"COMPRA": 0, "COMPRA (gatilho 4h)": 1,
-             "REALIZAR PARCIAL": 2, "VENDA": 3, "NEUTRO": 4, "DADOS INSUFICIENTES": 5}
+    ordem = {"COMPRA": 0, "COMPRA (gatilho 4h)": 1, "REALIZAR PARCIAL": 2, "VENDA": 3,
+             "ALVO JA ALCANCADO": 4, "SEM ENTRADA (R:R baixo)": 5, "ABAIXO DO STOP": 6,
+             "NEUTRO": 7, "DADOS INSUFICIENTES": 8}
     resultados = sorted(resultados, key=lambda x: (ordem.get(x["sinal"], 9), -x.get("score_compra", 0)))
 
     L = [f"# Radar de cripto - {agora} (horario de Brasilia)", "",
@@ -387,12 +411,15 @@ def montar_relatorio(resultados, regime, janela, fora_da_fonte, nao_coletadas, s
     acoes = [r for r in resultados if r["sinal"] not in ("NEUTRO", "DADOS INSUFICIENTES")]
     if acoes:
         L += ["## Sinais", "",
-              "| Par | Sinal | Fech. 1d | Agora | RSI(1d) | Stop | Alvo | Score C/V |",
-              "|---|---|---|---|---|---|---|---|"]
+              "| Par | Sinal | Fech. 1d | Agora | RSI(1d) | Stop | Alvo | R:R agora | Score C/V |",
+              "|---|---|---|---|---|---|---|---|---|"]
         for r in acoes:
+            rr = r.get("rr_real")
+            rr_txt = f"{rr:.2f}:1" if rr is not None else "-"
             L.append(f"| {r['par']} | **{r['sinal']}** | {formatar(r['preco'])} | "
                      f"{formatar(r['preco_atual'])} | "
                      f"{r['rsi']:.0f} | {formatar(r.get('stop'))} | {formatar(r.get('alvo'))} | "
+                     f"{rr_txt} | "
                      f"{r.get('score_compra','-')}/{r.get('score_venda','-')} |")
         L.append("")
         L += ["### Por que", ""]
@@ -453,8 +480,12 @@ def main():
     p.add_argument("--janela", choices=["manha", "noite"], default="noite")
     p.add_argument("--saida", help="arquivo markdown de saida (padrao: stdout)")
     p.add_argument("--json", action="store_true", help="imprime o resultado bruto em JSON")
+    p.add_argument("--precos", help="JSON {PAR: preco} com cotacoes ao vivo; substitui o "
+                                    "fechamento da vela em formacao como preco atual. "
+                                    "Nao altera nenhum indicador - so o preco de entrada.")
     args = p.parse_args()
 
+    precos_vivos = json.load(open(args.precos)) if args.precos else {}
     universo = json.load(open(os.path.join(os.path.dirname(__file__), "moedas.json")))
     pares = [c["par"] for c in universo["cobertas"]]
     ausentes_config = [c["tv"] for c in universo["sem_cobertura"]]
@@ -481,7 +512,7 @@ def main():
             preco_atual = preco_4h      # o 4h e mais recente, entao tem prioridade
         else:
             sem_4h.append(par)
-        d1[par] = indicadores(velas1, preco_atual)
+        d1[par] = indicadores(velas1, precos_vivos.get(par, preco_atual))
 
     if not d1:
         sys.exit("Nenhum arquivo de velas encontrado em " + args.dir +
