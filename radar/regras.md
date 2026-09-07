@@ -170,3 +170,28 @@ em vez de sobre o fechamento, aceitando que o stop deixe de ser um nível fixo
 verificável. O desenho atual privilegia reprodutibilidade (o stop de um sinal é
 sempre o mesmo número) sobre atualidade. A escolha é defensável, mas o usuário
 precisa saber que ela existe.
+
+### Segunda limitação do portão: ele só olha para cima
+
+O portão bloqueia quando o preço **subiu** o suficiente para achatar o
+risco/retorno. Ele não tem nenhum mecanismo simétrico para o lado da queda:
+quando o preço **cai** abaixo do fechamento, o R:R calculado *melhora*, e o
+par passa exibindo uma nota alta.
+
+Observado em 07/09/2026 11h: JUP caiu 7,4% abaixo do fechamento que gerou o
+sinal e apareceu com R:R **9,30:1** — o número mais alto da tabela. Esse 9,30
+não mede oportunidade; mede o quanto o preço já andou contra a premissa do
+sinal. O par consumiu 71% da distância até o stop *antes* de qualquer entrada.
+
+Um par em queda fica progressivamente mais "atraente" por esse critério até
+cruzar o stop, quando passa direto para ABAIXO DO STOP — sem degradação
+gradual que sirva de aviso.
+
+Correção possível (não implementada): rejeitar também quando
+
+    (fechamento - preço atual) > FRACAO_RISCO_CONSUMIDO × (fechamento - stop)
+
+com `FRACAO_RISCO_CONSUMIDO = 0.5`, por exemplo. Isso bloquearia entradas em
+pares que já gastaram metade do risco antes da entrada. Enquanto não estiver
+implementado: **na tabela de sinais, um R:R muito acima de 2:1 deve ser lido
+como alerta de queda, não como qualidade.**
