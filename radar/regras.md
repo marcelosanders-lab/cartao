@@ -144,3 +144,29 @@ piso abaixo do qual seguimento de tendência não paga a taxa de acerto do méto
 Um aviso sobre ler a coluna: **R:R que melhora porque o preço caiu não é notícia
 boa.** LPT subiu de 2,00 para 2,86 apenas por ter recuado 2,85% em direção ao
 stop.
+
+### Limitação conhecida do portão: ele depende da hora da leitura
+
+O portão compara o preço atual com um stop e um alvo calculados sobre o **último
+fechamento diário**. Isso torna sua severidade função direta de quanto tempo
+passou desde aquele fechamento:
+
+- **Leitura das 22h** (logo após o fechamento das 21h BRT): preço atual ≈
+  fechamento, R:R ≈ 2.00:1 por construção. O portão praticamente não bloqueia nada.
+- **Leitura das 11h** (13h após o fechamento que serve de base): o preço já correu.
+  O R:R real desaba e o portão corta metade da lista.
+
+Isso ficou explícito em 06–07/09/2026: 14 pares bloqueados às 19h, 1 par bloqueado
+às 22h, com os mesmos indicadores diários. **A mudança não veio do mercado, veio
+do relógio.**
+
+Consequência: o veredito "COMPRA" da leitura das 22h só é válido para quem entra
+perto do fechamento. Quem lê às 22h e compra às 11h do dia seguinte está usando o
+stop de ontem num preço de hoje — exatamente o erro que o portão foi criado para
+impedir.
+
+Correção possível (não implementada): recalcular stop e alvo sobre o preço atual
+em vez de sobre o fechamento, aceitando que o stop deixe de ser um nível fixo
+verificável. O desenho atual privilegia reprodutibilidade (o stop de um sinal é
+sempre o mesmo número) sobre atualidade. A escolha é defensável, mas o usuário
+precisa saber que ela existe.
