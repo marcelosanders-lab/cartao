@@ -200,9 +200,10 @@ checar("R:R no fechamento e 2:1", _r["rr_real"], 2.0, tol=1e-9)
 # a 5% do caminho ate o alvo o R:R cai para ~1,73 - ainda acima do minimo
 checar_bool("avanco pequeno mantem a COMPRA",
             _sinal_com_preco(_fech + 0.05 * (_alvo - _fech))["sinal"] == "COMPRA", True)
-# a 10% do caminho o R:R bate exatamente no minimo de 1,5:1 e o sinal cai
-checar_bool("avanco de 15% bloqueia por R:R",
-            _sinal_com_preco(_fech + 0.15 * (_alvo - _fech))["sinal"] == "SEM ENTRADA (R:R baixo)", True)
+# a 15% do caminho o preco ja correu 0,45 ATR, acima do limite de 0,30 ATR
+checar_bool("avanco de 15% bloqueia por perseguicao",
+            _sinal_com_preco(_fech + 0.15 * (_alvo - _fech))["sinal"]
+            == "SEM ENTRADA (preco ja correu)", True)
 checar_bool("preco no alvo vira ALVO JA ALCANCADO",
             _sinal_com_preco(_alvo)["sinal"] == "ALVO JA ALCANCADO", True)
 checar_bool("preco acima do alvo tambem",
@@ -211,6 +212,42 @@ checar_bool("preco abaixo do stop vira ABAIXO DO STOP",
             _sinal_com_preco(_stop * 0.98)["sinal"] == "ABAIXO DO STOP", True)
 checar_bool("o bloqueio aparece nos motivos",
             any("BLOQUEIO" in m for m in _sinal_com_preco(_alvo)["motivos"]), True)
+
+# --- portao de entrada: os dois lados ---------------------------------------
+_atr = _d["atr"]
+_risco = _fech - _stop
+
+# limite de cima: 0,30 ATR e exatamente o RR_MINIMO de 1,5:1 reescrito em ATR
+checar("ENTRADA_MAX_ATR equivale ao RR_MINIMO", A.ENTRADA_MAX_ATR, 0.30, tol=1e-12)
+_no_limite = _sinal_com_preco(_fech + A.ENTRADA_MAX_ATR * _atr)
+checar_bool("no limite de perseguicao ainda e COMPRA", _no_limite["sinal"] == "COMPRA", True)
+checar("no limite o R:R e exatamente o minimo", _no_limite["rr_real"], A.RR_MINIMO, tol=1e-9)
+checar_bool("um passo acima do limite bloqueia",
+            _sinal_com_preco(_fech + 1.01 * A.ENTRADA_MAX_ATR * _atr)["sinal"]
+            == "SEM ENTRADA (preco ja correu)", True)
+
+# limite de baixo: o R:R sobe quando o preco cai, entao ele nao pode ser o portao
+_caiu_40 = _sinal_com_preco(_fech - 0.40 * _risco)
+checar_bool("queda de 40% do risco ainda e COMPRA", _caiu_40["sinal"] == "COMPRA", True)
+checar_bool("mesmo assim o R:R ja aparece inflado", _caiu_40["rr_real"] > A.ALVO_RR, True)
+
+_caiu_60 = _sinal_com_preco(_fech - 0.60 * _risco)
+checar_bool("queda de 60% do risco bloqueia",
+            _caiu_60["sinal"] == "SEM ENTRADA (risco ja consumido)", True)
+checar_bool("o bloqueio de queda vem COM R:R alto, nao baixo",
+            _caiu_60["rr_real"] > 6.0, True)
+checar_bool("o motivo explica que o R:R subiu por causa da queda",
+            any("porque o preco caiu" in m for m in _caiu_60["motivos"]), True)
+
+# regressao JUP 07/09: -7,4% do fechamento mostrava 9,30:1 e passava como COMPRA
+_jup = _sinal_com_preco(_fech - 0.71 * _risco)
+checar_bool("caso JUP: R:R acima de 9:1", _jup["rr_real"] > 9.0, True)
+checar_bool("caso JUP: agora e bloqueado",
+            _jup["sinal"] == "SEM ENTRADA (risco ja consumido)", True)
+
+# a deriva fica registrada para a tabela poder mostrar de onde veio o bloqueio
+checar("deriva em ATR e registrada",
+       _sinal_com_preco(_fech + 0.5 * _atr)["deriva_atr"], 0.5, tol=1e-9)
 
 print()
 if falhas:

@@ -112,86 +112,83 @@ resultado. A correção é sua: escolher entre os sinais por critério que o rad
 não tem (liquidez real na sua corretora, convicção na tese, tamanho de posição)
 e aceitar que em mercado de alta generalizada o radar não agrega seleção.
 
-## Portão de risco/retorno no preço atual
+## Portão de entrada: os dois desvios em relação ao fechamento
 
-Stop e alvo nascem do **fechamento diário**. Quando o preço corre depois desse
-fechamento — e ele corre, porque a vela leva até 24h para fechar — o 2:1
-anunciado deixa de existir para quem entra agora: o risco por unidade cresce e o
-alvo encolhe. O sistema passa a recalcular a relação sobre o preço atual e
-bloqueia o sinal quando ela cai abaixo de **1,5:1**:
+Stop e alvo nascem do **fechamento diário** e não se movem depois. Isso é
+deliberado: o stop é um nível de invalidação verificável, propriedade do setup,
+não do horário em que você olhou o gráfico.
 
-| Situação no preço atual | Sinal vira |
-|---|---|
-| Preço já no alvo ou acima | `ALVO JA ALCANCADO` |
-| R:R real abaixo de 1,5:1 | `SEM ENTRADA (R:R baixo)` |
-| Preço já abaixo do stop | `ABAIXO DO STOP` |
+O que muda com o horário é o **preço de entrada**. E o desvio entre o fechamento
+e o preço atual estraga o sinal nos dois sentidos — por motivos diferentes:
 
-A matemática é fechada: avançar uma fração *x* do caminho até o alvo leva a
-relação para `2(1−x) ÷ (1+2x)`. Em 10% do caminho ela já bate 1,5:1. Ou seja,
-**o sinal tem prazo de validade curto** — quem lê o relatório horas depois do
-fechamento da vela precisa que o motor diga isso, não que repita um 2:1 que
-morreu.
+| Desvio | O que acontece | Sinal vira |
+|---|---|---|
+| Preço já abaixo do stop | setup invalidado | `ABAIXO DO STOP` |
+| Preço já no alvo ou acima | não sobrou trade | `ALVO JA ALCANCADO` |
+| Caiu mais de 50% do risco | consumiu risco antes da entrada | `SEM ENTRADA (risco ja consumido)` |
+| Subiu mais de 0,30 ATR | você estaria pagando o movimento | `SEM ENTRADA (preco ja correu)` |
 
-O caso que motivou a regra, na leitura de 06/09/2026: **JUP** entrou como COMPRA
-com alvo em 0,26852 enquanto já era negociada a 0,26823. Comprar ali significava
-arriscar 0,0700 para ganhar 0,0003 — **0,00:1**. O sistema anunciava 2:1.
+Constantes: `FRACAO_RISCO_CONSUMIDO = 0.5` e
+`ENTRADA_MAX_ATR = STOP_ATR × (ALVO_RR − RR_MINIMO) ÷ (1 + RR_MINIMO)`.
 
-Efeito colateral bem-vindo: o portão fez a seleção que a pontuação não fazia. Na
-mesma leitura, 23 dos 28 pares davam COMPRA; com o portão, 14 caem e sobram 9.
-A diferença é que a régua aqui não foi ajustada para encurtar a lista — 1,5:1 é o
-piso abaixo do qual seguimento de tendência não paga a taxa de acerto do método.
+### Por que o limite de cima virou ATR e não R:R
 
-Um aviso sobre ler a coluna: **R:R que melhora porque o preço caiu não é notícia
-boa.** LPT subiu de 2,00 para 2,86 apenas por ter recuado 2,85% em direção ao
-stop.
+Até 07/09/2026 o portão de cima era escrito como "R:R no preço atual abaixo de
+1,5:1". A regra estava certa, mas a **unidade escondia a severidade**. Com
+`STOP_ATR = 1,5` e `ALVO_RR = 2`, exigir 1,5:1 equivale exatamente a não deixar
+o preço correr mais que **0,30 ATR** acima do fechamento — menos de um terço da
+oscilação diária típica. Ninguém lia "1,5:1" e entendia "0,30 ATR".
 
-### Limitação conhecida do portão: ele depende da hora da leitura
+Consequência prática: às 22h o preço ≈ fechamento e nada bloqueia; às 11h já
+houve 13h de deriva e o portão corta metade da lista. Em 06–07/09/2026 foram 14
+bloqueios às 19h, 2 às 22h e 5 às 11h, **com os mesmos indicadores diários**.
+A lógica estava correta — quem compra depois de uma corrida está mesmo pagando
+pior — mas o efeito parecia arbitrário porque a régua estava escrita numa
+unidade que não era a do fenômeno.
 
-O portão compara o preço atual com um stop e um alvo calculados sobre o **último
-fechamento diário**. Isso torna sua severidade função direta de quanto tempo
-passou desde aquele fechamento:
+`ENTRADA_MAX_ATR` é o mesmo número, agora legível e ajustável. O valor derivado
+é 0,30 ATR, idêntico ao comportamento anterior: **a mudança não alterou nenhum
+sinal**, só tornou o corte auditável. Se 0,30 ATR for apertado demais na prática,
+o ajuste agora é uma linha.
 
-- **Leitura das 22h** (logo após o fechamento das 21h BRT): preço atual ≈
-  fechamento, R:R ≈ 2.00:1 por construção. O portão praticamente não bloqueia nada.
-- **Leitura das 11h** (13h após o fechamento que serve de base): o preço já correu.
-  O R:R real desaba e o portão corta metade da lista.
+### Por que o R:R deixou de ser o portão
 
-Isso ficou explícito em 06–07/09/2026: 14 pares bloqueados às 19h, 1 par bloqueado
-às 22h, com os mesmos indicadores diários. **A mudança não veio do mercado, veio
-do relógio.**
+O R:R no preço atual só enxerga o desvio para cima. Quando o preço **cai**, ele
+*melhora*: o numerador (distância até o alvo) cresce e o denominador (distância
+até o stop) encolhe. Um par que está se invalidando exibe uma nota alta.
 
-Consequência: o veredito "COMPRA" da leitura das 22h só é válido para quem entra
-perto do fechamento. Quem lê às 22h e compra às 11h do dia seguinte está usando o
-stop de ontem num preço de hoje — exatamente o erro que o portão foi criado para
-impedir.
+Caso que fechou o argumento — **JUP, 07/09/2026**:
 
-Correção possível (não implementada): recalcular stop e alvo sobre o preço atual
-em vez de sobre o fechamento, aceitando que o stop deixe de ser um nível fixo
-verificável. O desenho atual privilegia reprodutibilidade (o stop de um sinal é
-sempre o mesmo número) sobre atualidade. A escolha é defensável, mas o usuário
-precisa saber que ela existe.
+- às 11h aparecia com **9,30:1**, o maior R:R da tabela inteira, por ter caído
+  7,4% abaixo do fechamento que gerou o sinal;
+- já tinha consumido **71% da distância até o stop** antes de qualquer entrada;
+- fechou o dia em 0,25417 contra 0,27552, **−7,7%**.
 
-### Segunda limitação do portão: ele só olha para cima
+Quem lesse 9,30:1 como qualidade teria comprado o pior par do dia. O número não
+media oportunidade, media estrago já ocorrido.
 
-O portão bloqueia quando o preço **subiu** o suficiente para achatar o
-risco/retorno. Ele não tem nenhum mecanismo simétrico para o lado da queda:
-quando o preço **cai** abaixo do fechamento, o R:R calculado *melhora*, e o
-par passa exibindo uma nota alta.
+Por isso o R:R permanece na tabela como **informação**, nunca como portão. Quem
+decide são os dois limites de desvio. Aplicado retroativamente à leitura das 11h
+de 07/09, o filtro de queda bloqueia **exatamente um** par — JUP, a 70,9% do
+risco — e não toca em nenhum dos outros oito (AAVE 33%, SOL 27%, NEAR 25%,
+ETH 20%, LINK 20%, PYTH 16%, SHIB 9%, PENGU 3%). Ele corta o caso que
+importava sem estreitar a lista por tabela.
 
-Observado em 07/09/2026 11h: JUP caiu 7,4% abaixo do fechamento que gerou o
-sinal e apareceu com R:R **9,30:1** — o número mais alto da tabela. Esse 9,30
-não mede oportunidade; mede o quanto o preço já andou contra a premissa do
-sinal. O par consumiu 71% da distância até o stop *antes* de qualquer entrada.
+### Como ler a coluna Deriva
 
-Um par em queda fica progressivamente mais "atraente" por esse critério até
-cruzar o stop, quando passa direto para ABAIXO DO STOP — sem degradação
-gradual que sirva de aviso.
+A tabela de sinais mostra a deriva em ATR (`+0.19 ATR`, `-0.10 ATR`). É de onde
+sai todo bloqueio de entrada, e serve de aviso antes do bloqueio: um par a
++0,28 ATR está a um passo de ser cortado; um a −0,40 do risco está caminhando
+para o corte de queda. O R:R ao lado é consequência, não causa.
 
-Correção possível (não implementada): rejeitar também quando
+**R:R muito acima de 2:1 continua a ser sinal de que o preço caiu** — só que
+agora, passado de 50% do risco, o motor bloqueia em vez de deixar você
+interpretar.
 
-    (fechamento - preço atual) > FRACAO_RISCO_CONSUMIDO × (fechamento - stop)
+### O que este portão não resolve
 
-com `FRACAO_RISCO_CONSUMIDO = 0.5`, por exemplo. Isso bloquearia entradas em
-pares que já gastaram metade do risco antes da entrada. Enquanto não estiver
-implementado: **na tabela de sinais, um R:R muito acima de 2:1 deve ser lido
-como alerta de queda, não como qualidade.**
+Ele filtra **entrada**, não **seleção**. Nas leituras de 06–08/09/2026, 22 de 28
+pares deram COMPRA com o portão ligado. Um mercado inteiro acima da EMA21
+continua produzindo lista inteira de COMPRA, e nenhum limite de deriva conserta
+isso — esse é problema da pontuação, documentado em "Diagnóstico de
+seletividade".

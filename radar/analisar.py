@@ -10,6 +10,8 @@ Uso:
 
 Arquivos esperados em --dir:  <PAR>_1d.json  e  <PAR>_4h.json
 (ex.: BTC_USDT_1d.json, BTC_USDT_4h.json)
+Aceita tambem .csv sem cabecalho: timestamp,open,high,low,close,volume_usd
+(50 linhas, mais recente primeiro).
 """
 import argparse
 import json
@@ -32,6 +34,15 @@ CRUZAMENTO_JANELA = 3        # cruzamento vale por N velas de 4h
 STOP_ATR = 1.5               # stop = 1.5 x ATR14 diario
 ALVO_RR = 2.0                # alvo = 2x o risco
 RR_MINIMO = 1.5              # R:R minimo no preco atual para o sinal valer entrada
+# Limite de perseguicao, em ATR acima do fechamento. E o RR_MINIMO reescrito na
+# unidade em que ele de fato opera: com STOP_ATR=1.5 e ALVO_RR=2, exigir 1,5:1
+# equivale a nao deixar o preco correr mais que 0,30 ATR depois do fechamento.
+# Isso estava implicito na formula do R:R - agora esta explicito e ajustavel.
+ENTRADA_MAX_ATR = STOP_ATR * (ALVO_RR - RR_MINIMO) / (1.0 + RR_MINIMO)
+# Limite de queda: quanto do risco ate o stop o preco pode ter consumido antes
+# da entrada. Sem isto uma queda forte INFLA o R:R e o sinal passa mais bonito
+# quanto pior for a vela (JUP em 07/09: 9,30:1 no dia em que caiu 7,7%).
+FRACAO_RISCO_CONSUMIDO = 0.5
 LIQUIDEZ_MINIMA_USD = 50_000 # media diaria de volume em USD na fonte
 SCORE_COMPRA = 6
 SCORE_VENDA = 5
@@ -337,30 +348,56 @@ def avaliar(par, d1, h4, regime_btc, janela):
         if sinal.startswith("COMPRA"):
             stop = preco - STOP_ATR * d1["atr"]
             alvo = preco + ALVO_RR * (preco - stop)
+            risco = preco - stop
             res["stop"] = stop
             res["alvo"] = alvo
             res["invalidacao"] = f"fechamento diario abaixo de {stop:.8g}"
 
-            # Stop e alvo nascem do fechamento diario. Quando o preco ja correu
-            # depois desse fechamento, o 2:1 vira ficcao: o risco por unidade
-            # cresce e o alvo encolhe. Quem entra, entra ao preco de agora - e e
-            # esse R:R que decide se ainda existe operacao.
+            # Stop e alvo sao propriedades do setup: nascem do fechamento diario
+            # e nao se movem porque voce olhou mais tarde. O que muda com o
+            # horario e o preco de entrada - e sao os DOIS desvios em relacao ao
+            # fechamento que decidem se ainda existe operacao:
+            #
+            #   para cima  - o preco correu e voce estaria pagando o movimento;
+            #   para baixo - o preco ja consumiu risco e o setup esta se
+            #                invalidando, mesmo que o R:R aritmetico suba.
+            #
+            # O R:R sozinho so enxerga o primeiro caso: quanto mais o preco cai,
+            # maior o numero que ele mostra. Por isso aqui ele e informativo,
+            # nunca o portao.
             atual = res["preco_atual"]
+            deriva = atual - preco
+            res["deriva"] = deriva
+            res["deriva_atr"] = deriva / d1["atr"]
             if atual > stop:
-                rr = (alvo - atual) / (atual - stop)
                 res["rr_sinal"] = ALVO_RR
-                res["rr_real"] = rr
-                if rr < RR_MINIMO:
-                    res["sinal"] = sinal = (
-                        "ALVO JA ALCANCADO" if rr <= 0 else "SEM ENTRADA (R:R baixo)")
-                    res["motivos"].append(
-                        f"BLOQUEIO: comprando a {atual:.8g} o risco/retorno cai para "
-                        f"{rr:.2f}:1, abaixo do minimo de {RR_MINIMO}:1 - o stop e o alvo "
-                        f"foram calculados sobre o fechamento de {preco:.8g}")
-            else:
+                res["rr_real"] = (alvo - atual) / (atual - stop)
+
+            if atual <= stop:
                 res["sinal"] = sinal = "ABAIXO DO STOP"
                 res["motivos"].append(
                     f"BLOQUEIO: preco atual {atual:.8g} ja esta abaixo do stop {stop:.8g}")
+            elif atual >= alvo:
+                res["sinal"] = sinal = "ALVO JA ALCANCADO"
+                res["motivos"].append(
+                    f"BLOQUEIO: preco atual {atual:.8g} ja alcancou o alvo {alvo:.8g} "
+                    f"calculado sobre o fechamento de {preco:.8g}")
+            elif -deriva > FRACAO_RISCO_CONSUMIDO * risco:
+                res["sinal"] = sinal = "SEM ENTRADA (risco ja consumido)"
+                res["motivos"].append(
+                    f"BLOQUEIO: o preco caiu de {preco:.8g} para {atual:.8g} e ja consumiu "
+                    f"{-deriva / risco * 100:.0f}% do risco ate o stop {stop:.8g} "
+                    f"(limite: {FRACAO_RISCO_CONSUMIDO * 100:.0f}%) - o R:R de "
+                    f"{res['rr_real']:.2f}:1 esta alto porque o preco caiu, "
+                    "nao porque a entrada melhorou")
+            elif deriva > ENTRADA_MAX_ATR * d1["atr"]:
+                res["sinal"] = sinal = "SEM ENTRADA (preco ja correu)"
+                res["motivos"].append(
+                    f"BLOQUEIO: o preco subiu de {preco:.8g} para {atual:.8g}, "
+                    f"{deriva / d1['atr']:.2f} ATR acima do fechamento "
+                    f"(limite: {ENTRADA_MAX_ATR:.2f} ATR) - comprando agora o "
+                    f"risco/retorno cai para {res['rr_real']:.2f}:1, "
+                    f"abaixo de {RR_MINIMO}:1")
         elif sinal in ("VENDA", "REALIZAR PARCIAL"):
             res["reentrada"] = f"reavaliar apenas com fechamento diario acima de {ema21:.8g}"
     return res
@@ -411,13 +448,15 @@ def montar_relatorio(resultados, regime, janela, fora_da_fonte, nao_coletadas, s
     acoes = [r for r in resultados if r["sinal"] not in ("NEUTRO", "DADOS INSUFICIENTES")]
     if acoes:
         L += ["## Sinais", "",
-              "| Par | Sinal | Fech. 1d | Agora | RSI(1d) | Stop | Alvo | R:R agora | Score C/V |",
-              "|---|---|---|---|---|---|---|---|---|"]
+              "| Par | Sinal | Fech. 1d | Agora | Deriva | RSI(1d) | Stop | Alvo | R:R agora | Score C/V |",
+              "|---|---|---|---|---|---|---|---|---|---|"]
         for r in acoes:
             rr = r.get("rr_real")
             rr_txt = f"{rr:.2f}:1" if rr is not None else "-"
+            dv = r.get("deriva_atr")
+            dv_txt = f"{dv:+.2f} ATR" if dv is not None else "-"
             L.append(f"| {r['par']} | **{r['sinal']}** | {formatar(r['preco'])} | "
-                     f"{formatar(r['preco_atual'])} | "
+                     f"{formatar(r['preco_atual'])} | {dv_txt} | "
                      f"{r['rsi']:.0f} | {formatar(r.get('stop'))} | {formatar(r.get('alvo'))} | "
                      f"{rr_txt} | "
                      f"{r.get('score_compra','-')}/{r.get('score_venda','-')} |")

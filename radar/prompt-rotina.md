@@ -44,8 +44,23 @@ Para cada par, duas chamadas à ferramenta da Crypto.com:
 Dispare 6 a 8 chamadas em paralelo por vez. Depois de cada lote, grave cada
 resposta **na íntegra e sem reformatar** em:
 
-- `radar/dados/<PAR>_1d.json`
-- `radar/dados/<PAR>_4h.json`
+- `radar/dados.novo/<PAR>_1d.json`
+- `radar/dados.novo/<PAR>_4h.json`
+
+**Colete em `radar/dados.novo/`, nunca direto em `radar/dados/`.** Se a coleta
+falhar no meio, os dados bons da leitura anterior continuam intactos. Só depois
+que os 56 arquivos estiverem no lugar e com 50 linhas cada, troque de uma vez:
+
+```bash
+rm -rf radar/dados.antigo && mv radar/dados radar/dados.antigo \
+  && mv radar/dados.novo radar/dados && rm -rf radar/dados.antigo
+```
+
+O motor aceita `.json` (resposta bruta) ou `.csv` sem cabeçalho
+(`timestamp,open,high,low,close,volume_usd`, 50 linhas, mais recente primeiro).
+O `.csv` é bem mais barato em contexto e permite reaproveitar as velas já
+fechadas da leitura anterior — mas só depois de ler a resposta nova inteira e
+conferir que as linhas sobrepostas batem; a corretora revisa velas antigas.
 
 Copie o JSON exatamente como veio (`{"data":[...],...}`). Não reordene, não
 arredonde, não remova campos, não recalcule nada. O motor faz a matemática; sua
@@ -58,7 +73,7 @@ relatório vai listar a falha de coleta sozinho.
 
 ```bash
 python3 radar/analisar.py --dir radar/dados --janela <manha|noite> \
-  --saida radar/relatorios/$(date +%Y-%m-%d)-<manha|noite>.md
+  --saida radar/relatorios/$(TZ=America/Sao_Paulo date +%Y-%m-%d)-<manha|noite>.md
 ```
 
 Crie `radar/relatorios/` se não existir.
@@ -76,7 +91,7 @@ Depois faça commit dos relatórios na branch de trabalho:
 
 ```bash
 git add radar/relatorios && \
-git commit -m "radar: leitura de $(date +%Y-%m-%d) (<manha|noite>)" && \
+git commit -m "radar: leitura de $(TZ=America/Sao_Paulo date +%Y-%m-%d) (<manha|noite>)" && \
 git push -u origin claude/moedas-sinais-compra-venda-zhq66i
 ```
 
