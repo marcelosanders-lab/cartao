@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Índices e Projeções — IPCA, IGP-M, INPC, Selic e Dólar</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f4f6f8; --card: #fff; --ink: #111b21; --muted: #667781; --line: #e6eaee;
+    --brand: #01696f; --brand-2: #128C7E; --up: #b42318; --down: #067647; --warn: #b54708;
+  }
+  body { background: var(--bg); color: var(--ink); font-family: 'Inter', system-ui, sans-serif; font-size: 15px; line-height: 1.45; padding: 1rem; }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  header.top { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; justify-content: space-between; margin-bottom: 1rem; }
+  h1 { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.01em; }
+  .sub { font-size: 0.8rem; color: var(--muted); }
+  button { font: inherit; cursor: pointer; }
+  .btn { background: var(--brand); color: #fff; border: none; border-radius: 8px; padding: 0.5rem 1rem; font-size: 0.85rem; font-weight: 600; }
+  .btn:disabled { opacity: 0.5; cursor: default; }
+  .tabs { display: flex; gap: 0.25rem; border-bottom: 1px solid var(--line); margin-bottom: 1.25rem; overflow-x: auto; }
+  .tab { background: none; border: none; padding: 0.6rem 0.9rem; font-size: 0.88rem; font-weight: 600; color: var(--muted); border-bottom: 2px solid transparent; white-space: nowrap; }
+  .tab[aria-selected="true"] { color: var(--brand); border-bottom-color: var(--brand); }
+  section[hidden] { display: none; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.1rem; margin-bottom: 1rem; }
+  .card h2 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.15rem; }
+  .card .hint { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.85rem; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0.75rem; }
+  .tile { border: 1px solid var(--line); border-radius: 10px; padding: 0.75rem 0.85rem; }
+  .tile .k { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+  .tile .v { font-size: 1.4rem; font-weight: 700; font-variant-numeric: tabular-nums; margin: 0.15rem 0; }
+  .tile .m { font-size: 0.72rem; color: var(--muted); }
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.85rem; min-width: 520px; }
+  th, td { text-align: right; padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; font-variant-numeric: normal; }
+  thead th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 600; }
+  tbody tr:last-child td { border-bottom: none; }
+  .proj td { color: #2f4858; background: #f8fbfb; }
+  .neg { color: var(--down); } .pos { color: var(--up); }
+  .note { font-size: 0.78rem; color: var(--muted); border-left: 3px solid var(--line); padding-left: 0.7rem; margin-top: 0.8rem; }
+  .warn { border-left-color: var(--warn); color: var(--warn); }
+  .err { font-size: 0.8rem; color: var(--warn); background: #fffaf0; border: 1px solid #fde3b7; border-radius: 8px; padding: 0.6rem 0.75rem; margin-bottom: 0.75rem; word-break: break-all; }
+  .err a { color: inherit; }
+  form.calc { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.75rem; align-items: end; }
+  label { display: block; font-size: 0.72rem; color: var(--muted); margin-bottom: 0.25rem; font-weight: 600; }
+  input, select { font: inherit; width: 100%; padding: 0.5rem 0.6rem; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+  .result { margin-top: 1rem; font-size: 0.9rem; }
+  .result strong { font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+  .src { font-size: 0.75rem; color: var(--muted); margin-top: 1.5rem; }
+  .src a { color: var(--brand-2); }
+  .status { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; font-size: 0.72rem; }
+  .chip { border: 1px solid var(--line); border-radius: 999px; padding: 0.2rem 0.6rem; background: #fff; color: var(--muted); }
+  .chip.ok { border-color: #bbe7cd; color: var(--down); }
+  .chip.bad { border-color: #fde3b7; color: var(--warn); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div>
+    <h1>Índices e Projeções</h1>
+    <p class="sub">IPCA · IGP-M · INPC · Selic · Dólar — dados oficiais BCB/IBGE/FGV e expectativas Focus</p>
+  </div>
+  <div style="text-align:right">
+    <button class="btn" id="reload">Atualizar</button>
+    <div class="sub" id="stamp">—</div>
+  </div>
+</header>
+
+<div class="status" id="status"></div>
+<div id="errors"></div>
+
+<nav class="tabs" role="tablist">
+  <button class="tab" role="tab" data-panel="anual" aria-selected="true">Anual</button>
+  <button class="tab" role="tab" data-panel="mensal" aria-selected="false">Mensal</button>
+  <button class="tab" role="tab" data-panel="semanal" aria-selected="false">Semanal</button>
+  <button class="tab" role="tab" data-panel="calc" aria-selected="false">Correção monetária</button>
+</nav>
+
+<section id="panel-anual">
+  <div class="card">
+    <h2>Realizado</h2>
+    <p class="hint">Último dado divulgado, acumulado no ano corrente e em 12 meses.</p>
+    <div class="grid" id="tiles-anual"></div>
+  </div>
+  <div class="card">
+    <h2>Projeções anuais — mediana Focus</h2>
+    <p class="hint">Mediana das expectativas de mercado coletadas pelo BCB (base de cálculo 0), por ano de referência.</p>
+    <div class="scroll"><table id="tbl-anual"></table></div>
+    <p class="note">Selic e Dólar anuais são valores de <em>fim de período</em>; IPCA, IGP-M e INPC são variação acumulada no ano.</p>
+  </div>
+</section>
+
+<section id="panel-mensal" hidden>
+  <div class="card">
+    <h2>Série mensal realizada — últimos 13 meses</h2>
+    <p class="hint">Variação percentual mensal. Fonte: BCB/SGS (IPCA e INPC do IBGE; IGP-M da FGV).</p>
+    <div class="scroll"><table id="tbl-mensal"></table></div>
+  </div>
+  <div class="card">
+    <h2>Projeção mensal — mediana Focus (12 meses à frente)</h2>
+    <p class="hint">Expectativa mensal por mês de referência, com o acumulado encadeado da projeção.</p>
+    <div class="scroll"><table id="tbl-mensal-proj"></table></div>
+    <p class="note">O Focus não publica expectativa mensal para todos os indicadores em todos os meses; células vazias significam ausência de coleta, não zero.</p>
+  </div>
+</section>
+
+<section id="panel-semanal" hidden>
+  <div class="card">
+    <h2>Evolução semanal do Focus</h2>
+    <p class="hint">Como a mediana para o ano corrente mudou a cada coleta semanal — este é o único dado genuinamente semanal do conjunto.</p>
+    <div class="scroll"><table id="tbl-focus-sem"></table></div>
+  </div>
+  <div class="card">
+    <h2>Selic por reunião do Copom</h2>
+    <p class="hint">Mediana Focus da Selic esperada ao fim de cada reunião.</p>
+    <div class="scroll"><table id="tbl-copom"></table></div>
+  </div>
+  <div class="card">
+    <h2>Dólar PTAX — últimos pregões</h2>
+    <p class="hint">Cotação de venda, boletim de fechamento (PTAX). Variação na semana calculada sobre o pregão de 5 dias úteis antes.</p>
+    <div class="scroll"><table id="tbl-ptax"></table></div>
+  </div>
+  <div class="card">
+    <h2>Equivalentes semanais <span style="font-weight:500;color:var(--muted)">(derivados)</span></h2>
+    <p class="hint">Nenhum destes índices é publicado em base semanal. Os valores abaixo são conversões da taxa mensal/anual, feitas aqui.</p>
+    <div class="grid" id="tiles-semanal"></div>
+    <p class="note warn">Uso indevido: estes números não substituem índice oficial em cálculo judicial, contrato ou reajuste. Servem para dimensionar ordem de grandeza. Fórmulas: Selic/CDI semanal = (1+i<sub>a.a.</sub>)<sup>5/252</sup>−1; índice de preços semanal = (1+i<sub>a.m.</sub>)<sup>7/30</sup>−1.</p>
+  </div>
+</section>
+
+<section id="panel-calc" hidden>
+  <div class="card">
+    <h2>Correção monetária por índice oficial</h2>
+    <p class="hint">Encadeamento das variações mensais efetivamente divulgadas entre o mês inicial (exclusive) e o mês final (inclusive) — critério "pro rata mensal" da Calculadora do Cidadão.</p>
+    <form class="calc" id="form-calc">
+      <div><label for="c-valor">Valor original (R$)</label><input id="c-valor" type="number" step="0.01" min="0" value="1000,00" inputmode="decimal"></div>
+      <div><label for="c-indice">Índice</label><select id="c-indice"><option value="ipca">IPCA</option><option value="inpc">INPC</option><option value="igpm">IGP-M</option><option value="selic">Selic acumulada</option></select></div>
+      <div><label for="c-de">Mês inicial</label><input id="c-de" type="month"></div>
+      <div><label for="c-ate">Mês final</label><input id="c-ate" type="month"></div>
+      <div><button class="btn" type="submit">Calcular</button></div>
+    </form>
+    <div class="result" id="calc-result"></div>
+    <p class="note">A Selic, quando aplicada como correção + juros (art. 406 do CC c/c Taxa Legal), <strong>não</strong> se cumula com juros de mora nem com outro índice de correção no mesmo período. Conferir sempre o critério fixado no título executivo.</p>
+  </div>
+</section>
+
+<p class="src">
+  Fontes consultadas em tempo real pelo navegador:
+  <a href="https://dadosabertos.bcb.gov.br/dataset/20542-taxa-de-juros---selic" target="_blank" rel="noopener">BCB/SGS</a> ·
+  <a href="https://dadosabertos.bcb.gov.br/dataset/expectativas-mercado" target="_blank" rel="noopener">BCB — Expectativas de Mercado (Focus)</a>.
+  Nenhum valor é armazenado ou embutido nesta página: tudo é buscado no momento em que ela é aberta.
+</p>
+
+</div>
+
+<script>
+"use strict";
+
+const SGS = {
+  ipca:  { cod: 433,  nome: "IPCA",  unid: "%" },
+  inpc:  { cod: 188,  nome: "INPC",  unid: "%" },
+  igpm:  { cod: 189,  nome: "IGP-M", unid: "%" },
+  selicMeta: { cod: 432, nome: "Selic meta", unid: "% a.a." },
+  selicMes:  { cod: 4390, nome: "Selic acumulada no mês", unid: "%" },
+  cdiDia:    { cod: 12,  nome: "CDI", unid: "% a.d." },
+  ptax:      { cod: 1,   nome: "Dólar PTAX venda", unid: "R$" }
+};
+
+const FOCUS_BASE = "https://olinda.bcb.gov.br/olinda/servico/Expectativas/versao/v1/odata/";
+const FOCUS_INDICADORES = ["IPCA", "IGP-M", "INPC", "Selic", "Câmbio"];
+
+const JANELA_MESES = 240; // 20 anos de série mensal para a calculadora
+const state = { sgs: {}, focus: {}, erros: [] };
+
+/* ---------- utilidades ---------- */
+
+const pad = n => String(n).padStart(2, "0");
+const fmtBR = (v, casas = 2) =>
+  v === null || v === undefined || Number.isNaN(v) ? "—" :
+  v.toLocaleString("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas });
+const pct = (v, casas = 2) => v === null || v === undefined || Number.isNaN(v) ? "—" : fmtBR(v, casas) + "%";
+const sinal = v => v === null || v === undefined || Number.isNaN(v) ? "" : (v < 0 ? "neg" : (v > 0 ? "pos" : ""));
+
+// dd/mm/aaaa -> Date (meio-dia, evita fuso)
+function parseBR(s) {
+  const [d, m, a] = s.split("/").map(Number);
+  return new Date(a, m - 1, d, 12);
+}
+const chaveMes = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+const rotuloMes = ch => {
+  const [a, m] = ch.split("-");
+  return `${["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"][+m - 1]}/${a}`;
+};
+
+// encadeia variações percentuais: [0,5 , 0,3] -> 0,8015%
+function encadear(vars) {
+  if (!vars.length) return null;
+  return (vars.reduce((f, v) => f * (1 + v / 100), 1) - 1) * 100;
+}
+
+async function getJSON(url) {
+  const r = await fetch(url, { headers: { Accept: "application/json" } });
+  if (!r.ok) throw new Error(`HTTP ${r.status} em ${url}`);
+  return r.json();
+}
+
+function registraErro(rotulo, url, e) {
+  state.erros.push({ rotulo, url, msg: e && e.message ? e.message : String(e) });
+}
+
+/* ---------- coleta ---------- */
+
+// O SGS recusa intervalos muito longos (limite prático de ~10 anos por requisição),
+// então a janela é quebrada em blocos de 9 anos e reunida aqui.
+async function carregaSGS(chave, meses) {
+  const cfg = SGS[chave];
+  const f = d => `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+  const fimTotal = new Date();
+  const iniTotal = new Date(fimTotal.getFullYear(), fimTotal.getMonth() - meses, 1);
+  const blocos = [];
+  let cursor = iniTotal;
+  while (cursor < fimTotal) {
+    const fimBloco = new Date(Math.min(
+      new Date(cursor.getFullYear() + 9, cursor.getMonth(), cursor.getDate()).getTime(),
+      fimTotal.getTime()));
+    blocos.push([new Date(cursor), fimBloco]);
+    cursor = new Date(fimBloco.getFullYear(), fimBloco.getMonth(), fimBloco.getDate() + 1);
+  }
+  const pontos = new Map();
+  for (const [a, b] of blocos) {
+    const url = `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${cfg.cod}/dados?formato=json&dataInicial=${f(a)}&dataFinal=${f(b)}`;
+    try {
+      const dados = await getJSON(url);
+      dados.filter(d => d.valor !== null && d.valor !== "")
+           .forEach(d => pontos.set(d.data, parseFloat(d.valor)));
+    } catch (e) {
+      registraErro(`SGS ${cfg.cod} (${cfg.nome})`, url, e);
+    }
+  }
+  state.sgs[chave] = [...pontos.entries()]
+    .map(([data, valor]) => ({ data: parseBR(data), valor }))
+    .sort((x, y) => x.data - y.data);
+}
+
+async function carregaFocus(recurso, chave, filtroExtra, top) {
+  const filtro = `Indicador in (${FOCUS_INDICADORES.map(i => `'${i}'`).join(",")}) and baseCalculo eq 0` +
+                 (filtroExtra ? ` and ${filtroExtra}` : "");
+  const url = FOCUS_BASE + recurso +
+    `?$format=json&$top=${top}&$orderby=${encodeURIComponent("Data desc")}` +
+    `&$filter=${encodeURIComponent(filtro)}`;
+  try {
+    const j = await getJSON(url);
+    state.focus[chave] = j.value || [];
+  } catch (e) {
+    state.focus[chave] = [];
+    registraErro(`Focus — ${recurso}`, url, e);
+  }
+}
+
+async function carregaTudo() {
+  state.erros = [];
+  const hoje = new Date();
+  const anoAtual = hoje.getFullYear();
+  await Promise.all([
+    carregaSGS("ipca", JANELA_MESES), carregaSGS("inpc", JANELA_MESES), carregaSGS("igpm", JANELA_MESES),
+    carregaSGS("selicMeta", 12), carregaSGS("selicMes", JANELA_MESES),
+    carregaSGS("cdiDia", 2), carregaSGS("ptax", 2),
+    carregaFocus("ExpectativasMercadoAnuais", "anuais",
+      `DataReferencia ge '${anoAtual}' and DataReferencia le '${anoAtual + 3}'`, 2000),
+    carregaFocus("ExpectativaMercadoMensais", "mensais", null, 3000),
+    carregaFocus("ExpectativasMercadoSelic", "selic", null, 400)
+  ]);
+  render();
+}
+
+/* ---------- agregações ---------- */
+
+// série mensal -> mapa {aaaa-mm: valor}
+function porMes(chave) {
+  const m = new Map();
+  (state.sgs[chave] || []).forEach(p => m.set(chaveMes(p.data), p.valor));
+  return m;
+}
+
+function acumNoAno(chave) {
+  const s = state.sgs[chave] || [];
+  if (!s.length) return null;
+  const ano = s[s.length - 1].data.getFullYear();
+  return encadear(s.filter(p => p.data.getFullYear() === ano).map(p => p.valor));
+}
+
+function acum12(chave) {
+  const s = state.sgs[chave] || [];
+  if (s.length < 12) return null;
+  return encadear(s.slice(-12).map(p => p.valor));
+}
+
+function ultimo(chave) {
+  const s = state.sgs[chave] || [];
+  return s.length ? s[s.length - 1] : null;
+}
+
+// mediana Focus mais recente para um indicador/ano
+function focusAnual(indicador, ano) {
+  const linhas = (state.focus.anuais || [])
+    .filter(l => l.Indicador === indicador && String(l.DataReferencia) === String(ano));
+  if (!linhas.length) return null;
+  linhas.sort((a, b) => (a.Data < b.Data ? 1 : -1));
+  return linhas[0];
+}
+
+function focusMensal(indicador, ch) {
+  const ref = `${ch.slice(5)}/${ch.slice(0, 4)}`; // aaaa-mm -> mm/aaaa
+  const linhas = (state.focus.mensais || [])
+    .filter(l => l.Indicador === indicador && l.DataReferencia === ref);
+  if (!linhas.length) return null;
+  linhas.sort((a, b) => (a.Data < b.Data ? 1 : -1));
+  return linhas[0];
+}
+
+/* ---------- render ---------- */
+
+function render() {
+  renderStatus();
+  renderAnual();
+  renderMensal();
+  renderSemanal();
+  document.getElementById("stamp").textContent =
+    "Consulta em " + new Date().toLocaleString("pt-BR");
+}
+
+function renderStatus() {
+  const box = document.getElementById("status");
+  const fontes = [
+    ["IPCA", state.sgs.ipca], ["INPC", state.sgs.inpc], ["IGP-M", state.sgs.igpm],
+    ["Selic", state.sgs.selicMeta], ["PTAX", state.sgs.ptax],
+    ["Focus anual", state.focus.anuais], ["Focus mensal", state.focus.mensais], ["Focus Copom", state.focus.selic]
+  ];
+  box.innerHTML = fontes.map(([nome, arr]) =>
+    `<span class="chip ${arr && arr.length ? "ok" : "bad"}">${nome}: ${arr && arr.length ? arr.length + " registros" : "sem dados"}</span>`
+  ).join("");
+
+  const errBox = document.getElementById("errors");
+  errBox.innerHTML = state.erros.length
+    ? `<div class="err"><strong>${state.erros.length} fonte(s) não responderam.</strong> Causa habitual: bloqueio de rede/CORS no ambiente em que a página está aberta. URLs tentadas:<br>` +
+      state.erros.map(e => `• ${e.rotulo} — ${e.msg}<br><a href="${e.url}" target="_blank" rel="noopener">${e.url}</a>`).join("<br>") +
+      `</div>`
+    : "";
+}
+
+function renderAnual() {
+  const tiles = [
+    { k: "IPCA", u: ultimo("ipca"), ano: acumNoAno("ipca"), doze: acum12("ipca") },
+    { k: "INPC", u: ultimo("inpc"), ano: acumNoAno("inpc"), doze: acum12("inpc") },
+    { k: "IGP-M", u: ultimo("igpm"), ano: acumNoAno("igpm"), doze: acum12("igpm") }
+  ];
+  let html = tiles.map(t => `
+    <div class="tile">
+      <div class="k">${t.k}</div>
+      <div class="v ${sinal(t.u && t.u.valor)}">${t.u ? pct(t.u.valor) : "—"}</div>
+      <div class="m">${t.u ? rotuloMes(chaveMes(t.u.data)) : "—"} · no ano ${pct(t.ano)} · 12m ${pct(t.doze)}</div>
+    </div>`).join("");
+
+  const sm = ultimo("selicMeta");
+  const cdi = ultimo("cdiDia");
+  const cdiAno = cdi ? (Math.pow(1 + cdi.valor / 100, 252) - 1) * 100 : null;
+  html += `
+    <div class="tile">
+      <div class="k">Selic meta</div>
+      <div class="v">${sm ? pct(sm.valor) + " a.a." : "—"}</div>
+      <div class="m">vigente em ${sm ? sm.data.toLocaleDateString("pt-BR") : "—"} · Selic no mês ${pct(ultimo("selicMes") && ultimo("selicMes").valor)}</div>
+    </div>
+    <div class="tile">
+      <div class="k">CDI anualizado</div>
+      <div class="v">${pct(cdiAno)}</div>
+      <div class="m">de ${cdi ? fmtBR(cdi.valor, 6) + "% a.d." : "—"} (base 252)</div>
+    </div>`;
+
+  const px = ultimo("ptax");
+  const pxAnt = (state.sgs.ptax || []).slice(-2)[0];
+  const varPx = px && pxAnt ? ((px.valor / pxAnt.valor) - 1) * 100 : null;
+  html += `
+    <div class="tile">
+      <div class="k">Dólar PTAX venda</div>
+      <div class="v">${px ? "R$ " + fmtBR(px.valor, 4) : "—"}</div>
+      <div class="m ${sinal(varPx)}">${px ? px.data.toLocaleDateString("pt-BR") : "—"} · ${varPx === null ? "—" : (varPx > 0 ? "+" : "") + pct(varPx)} vs. pregão anterior</div>
+    </div>`;
+  document.getElementById("tiles-anual").innerHTML = html;
+
+  // tabela de projeções anuais
+  const anoAtual = new Date().getFullYear();
+  const anos = [anoAtual, anoAtual + 1, anoAtual + 2, anoAtual + 3];
+  const linhas = [
+    ["IPCA", "IPCA", "%"], ["IGP-M", "IGP-M", "%"], ["INPC", "INPC", "%"],
+    ["Selic (fim de período)", "Selic", "% a.a."], ["Dólar (fim de período)", "Câmbio", "R$"]
+  ];
+  let t = `<thead><tr><th>Indicador</th>${anos.map(a => `<th>${a}</th>`).join("")}<th>Coleta</th></tr></thead><tbody>`;
+  for (const [rot, ind, un] of linhas) {
+    let coleta = "—";
+    const celulas = anos.map(a => {
+      const l = focusAnual(ind, a);
+      if (!l) return "<td>—</td>";
+      if (l.Data && (coleta === "—" || l.Data > coleta)) coleta = l.Data;
+      const v = l.Mediana;
+      const txt = un === "R$" ? "R$ " + fmtBR(v, 2) : fmtBR(v, 2) + (un === "% a.a." ? "%" : "%");
+      return `<td title="média ${fmtBR(l.Media,2)} · desvio ${fmtBR(l.DesvioPadrao,2)} · ${l.numeroRespondentes||"?"} respondentes">${txt}</td>`;
+    }).join("");
+    t += `<tr class="proj"><td>${rot}</td>${celulas}<td>${coleta !== "—" ? coleta.split("-").reverse().join("/") : "—"}</td></tr>`;
+  }
+  document.getElementById("tbl-anual").innerHTML = t + "</tbody>";
+}
+
+function renderMensal() {
+  const chaves = [];
+  const base = state.sgs.ipca && state.sgs.ipca.length ? state.sgs.ipca : (state.sgs.igpm || []);
+  base.slice(-13).forEach(p => chaves.push(chaveMes(p.data)));
+  const mIpca = porMes("ipca"), mInpc = porMes("inpc"), mIgpm = porMes("igpm"), mSelic = porMes("selicMes");
+
+  let t = `<thead><tr><th>Mês</th><th>IPCA</th><th>INPC</th><th>IGP-M</th><th>Selic no mês</th></tr></thead><tbody>`;
+  chaves.forEach(ch => {
+    const c = k => { const v = k.get(ch); return `<td class="${sinal(v)}">${v === undefined ? "—" : pct(v)}</td>`; };
+    t += `<tr><td>${rotuloMes(ch)}</td>${c(mIpca)}${c(mInpc)}${c(mIgpm)}${c(mSelic)}</tr>`;
+  });
+  if (chaves.length) {
+    const soma = k => encadear(chaves.map(ch => k.get(ch)).filter(v => v !== undefined));
+    t += `<tr style="font-weight:700"><td>Acumulado no período</td><td>${pct(soma(mIpca))}</td><td>${pct(soma(mInpc))}</td><td>${pct(soma(mIgpm))}</td><td>${pct(soma(mSelic))}</td></tr>`;
+  }
+  document.getElementById("tbl-mensal").innerHTML = t + "</tbody>";
+
+  // projeção mensal Focus, 12 meses à frente
+  const hoje = new Date();
+  const futuros = [];
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(hoje.getFullYear(), hoje.getMonth() + i, 1);
+    futuros.push(chaveMes(d));
+  }
+  const acumulados = { IPCA: 1, "IGP-M": 1, INPC: 1 };
+  let p = `<thead><tr><th>Mês de referência</th><th>IPCA</th><th>IGP-M</th><th>INPC</th><th>Selic</th><th>Dólar</th><th>IPCA acum.</th></tr></thead><tbody>`;
+  futuros.forEach(ch => {
+    const cel = ind => {
+      const l = focusMensal(ind, ch);
+      if (!l) return { v: null, td: "<td>—</td>" };
+      const v = l.Mediana;
+      const txt = ind === "Câmbio" ? "R$ " + fmtBR(v, 2) : fmtBR(v, 2) + "%";
+      return { v, td: `<td title="coleta ${l.Data} · ${l.numeroRespondentes||"?"} respondentes">${txt}</td>` };
+    };
+    const ipca = cel("IPCA"), igpm = cel("IGP-M"), inpc = cel("INPC"), selic = cel("Selic"), cambio = cel("Câmbio");
+    if (ipca.v !== null) acumulados.IPCA *= (1 + ipca.v / 100);
+    const acumTxt = ipca.v !== null ? pct((acumulados.IPCA - 1) * 100) : "—";
+    p += `<tr class="proj"><td>${rotuloMes(ch)}</td>${ipca.td}${igpm.td}${inpc.td}${selic.td}${cambio.td}<td>${acumTxt}</td></tr>`;
+  });
+  document.getElementById("tbl-mensal-proj").innerHTML = p + "</tbody>";
+}
+
+function renderSemanal() {
+  // evolução das últimas coletas para o ano corrente
+  const anoAtual = String(new Date().getFullYear());
+  const datas = [...new Set((state.focus.anuais || [])
+    .filter(l => String(l.DataReferencia) === anoAtual)
+    .map(l => l.Data))].sort().reverse().slice(0, 8);
+
+  let t = `<thead><tr><th>Coleta</th><th>IPCA ${anoAtual}</th><th>IGP-M ${anoAtual}</th><th>INPC ${anoAtual}</th><th>Selic ${anoAtual}</th><th>Dólar ${anoAtual}</th></tr></thead><tbody>`;
+  datas.forEach(d => {
+    const busca = ind => {
+      const l = (state.focus.anuais || []).find(x => x.Data === d && x.Indicador === ind && String(x.DataReferencia) === anoAtual);
+      if (!l) return "<td>—</td>";
+      return `<td>${ind === "Câmbio" ? "R$ " + fmtBR(l.Mediana, 2) : fmtBR(l.Mediana, 2) + "%"}</td>`;
+    };
+    t += `<tr><td>${d.split("-").reverse().join("/")}</td>${busca("IPCA")}${busca("IGP-M")}${busca("INPC")}${busca("Selic")}${busca("Câmbio")}</tr>`;
+  });
+  document.getElementById("tbl-focus-sem").innerHTML = t + "</tbody>";
+
+  // Selic por reunião
+  const reunioes = (state.focus.selic || []).filter(l => l.Indicador === "Selic");
+  const porReuniao = new Map();
+  reunioes.forEach(l => {
+    const atual = porReuniao.get(l.Reuniao);
+    if (!atual || l.Data > atual.Data) porReuniao.set(l.Reuniao, l);
+  });
+  const ordenadas = [...porReuniao.entries()].sort((a, b) => {
+    const p = s => { const [r, a2] = s.split("/"); return a2 * 100 + parseInt(r.replace("R", ""), 10); };
+    return p(a[0]) - p(b[0]);
+  });
+  let c = `<thead><tr><th>Reunião</th><th>Mediana</th><th>Mínimo</th><th>Máximo</th><th>Coleta</th></tr></thead><tbody>`;
+  ordenadas.forEach(([r, l]) => {
+    c += `<tr class="proj"><td>${r}</td><td>${pct(l.Mediana)}</td><td>${pct(l.Minimo)}</td><td>${pct(l.Maximo)}</td><td>${l.Data ? l.Data.split("-").reverse().join("/") : "—"}</td></tr>`;
+  });
+  document.getElementById("tbl-copom").innerHTML = (ordenadas.length ? c : `<tbody><tr><td>Sem dados de reuniões.</td></tr>`) + "</tbody>";
+
+  // PTAX últimos pregões
+  const px = (state.sgs.ptax || []).slice(-10);
+  let d = `<thead><tr><th>Data</th><th>PTAX venda</th><th>Var. dia</th></tr></thead><tbody>`;
+  px.slice().reverse().forEach((p, i, arr) => {
+    const ant = arr[i + 1];
+    const v = ant ? ((p.valor / ant.valor) - 1) * 100 : null;
+    d += `<tr><td>${p.data.toLocaleDateString("pt-BR")}</td><td>R$ ${fmtBR(p.valor, 4)}</td><td class="${sinal(v)}">${v === null ? "—" : (v > 0 ? "+" : "") + pct(v)}</td></tr>`;
+  });
+  document.getElementById("tbl-ptax").innerHTML = d + "</tbody>";
+
+  // equivalentes semanais derivados
+  const semanalDeMensal = v => v === null || v === undefined ? null : (Math.pow(1 + v / 100, 7 / 30) - 1) * 100;
+  const semanalDeAnual = v => v === null || v === undefined ? null : (Math.pow(1 + v / 100, 5 / 252) - 1) * 100;
+  const uIpca = ultimo("ipca"), uIgpm = ultimo("igpm"), uInpc = ultimo("inpc"), uSel = ultimo("selicMeta");
+  const px5 = (state.sgs.ptax || []).slice(-6);
+  const varSem = px5.length >= 6 ? ((px5[5].valor / px5[0].valor) - 1) * 100 : null;
+  const t5 = [
+    ["IPCA semanal equiv.", pct(semanalDeMensal(uIpca && uIpca.valor), 4), uIpca ? "de " + rotuloMes(chaveMes(uIpca.data)) : "—"],
+    ["IGP-M semanal equiv.", pct(semanalDeMensal(uIgpm && uIgpm.valor), 4), uIgpm ? "de " + rotuloMes(chaveMes(uIgpm.data)) : "—"],
+    ["INPC semanal equiv.", pct(semanalDeMensal(uInpc && uInpc.valor), 4), uInpc ? "de " + rotuloMes(chaveMes(uInpc.data)) : "—"],
+    ["Selic semanal (5 d.u.)", pct(semanalDeAnual(uSel && uSel.valor), 4), uSel ? "meta " + pct(uSel.valor) + " a.a." : "—"],
+    ["Dólar — variação na semana", varSem === null ? "—" : (varSem > 0 ? "+" : "") + pct(varSem), "5 pregões PTAX"]
+  ];
+  document.getElementById("tiles-semanal").innerHTML = t5.map(([k, v, m]) =>
+    `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="m">${m}</div></div>`).join("");
+}
+
+/* ---------- calculadora ---------- */
+
+function calcular(ev) {
+  ev.preventDefault();
+  const out = document.getElementById("calc-result");
+  const valor = parseFloat(String(document.getElementById("c-valor").value).replace(",", "."));
+  const idx = document.getElementById("c-indice").value;
+  const de = document.getElementById("c-de").value;   // aaaa-mm
+  const ate = document.getElementById("c-ate").value;
+  const chave = idx === "selic" ? "selicMes" : idx;
+
+  if (!valor || !de || !ate || de >= ate) {
+    out.innerHTML = `<span style="color:var(--warn)">Informe valor, mês inicial e mês final (final posterior ao inicial).</span>`;
+    return;
+  }
+  const mapa = porMes(chave);
+  const meses = [...mapa.keys()].filter(ch => ch > de && ch <= ate).sort();
+  if (!meses.length) {
+    out.innerHTML = `<span style="color:var(--warn)">Não há dados divulgados para o intervalo. A série carregada cobre ${[...mapa.keys()].sort()[0] || "—"} a ${[...mapa.keys()].sort().slice(-1)[0] || "—"}; para períodos anteriores, aumente <code>JANELA_MESES</code> no script.</span>`;
+    return;
+  }
+  const faltantes = [];
+  let cursor = de;
+  while (cursor < ate) {
+    const [a, m] = cursor.split("-").map(Number);
+    const prox = new Date(a, m, 1);
+    cursor = chaveMes(prox);
+    if (cursor <= ate && !mapa.has(cursor)) faltantes.push(cursor);
+  }
+  const varTotal = encadear(meses.map(ch => mapa.get(ch)));
+  const fator = 1 + varTotal / 100;
+  const corrigido = valor * fator;
+  out.innerHTML = `
+    <div>Fator de correção <strong>${fmtBR(fator, 8)}</strong> — variação acumulada de <strong>${pct(varTotal, 4)}</strong>
+    em ${meses.length} mês(es), de ${rotuloMes(meses[0])} a ${rotuloMes(meses[meses.length - 1])}.</div>
+    <div style="margin-top:.5rem">R$ ${fmtBR(valor)} → <strong>R$ ${fmtBR(corrigido)}</strong>
+    <span class="sub">(diferença de R$ ${fmtBR(corrigido - valor)})</span></div>
+    ${faltantes.length ? `<p class="note warn">Meses sem divulgação no intervalo, ignorados no encadeamento: ${faltantes.map(rotuloMes).join(", ")}. Confira se o índice já foi publicado.</p>` : ""}`;
+}
+
+/* ---------- abas e inicialização ---------- */
+
+document.querySelectorAll(".tab").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(b => {
+      const sel = b === btn;
+      b.setAttribute("aria-selected", String(sel));
+      document.getElementById("panel-" + b.dataset.panel).hidden = !sel;
+    });
+  });
+});
+
+document.getElementById("form-calc").addEventListener("submit", calcular);
+document.getElementById("reload").addEventListener("click", async e => {
+  e.target.disabled = true; e.target.textContent = "Buscando…";
+  await carregaTudo();
+  e.target.disabled = false; e.target.textContent = "Atualizar";
+});
+
+(function initDatas() {
+  const hoje = new Date();
+  const fim = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+  const ini = new Date(hoje.getFullYear() - 1, hoje.getMonth() - 1, 1);
+  document.getElementById("c-ate").value = chaveMes(fim);
+  document.getElementById("c-de").value = chaveMes(ini);
+  document.getElementById("c-valor").value = "1000";
+})();
+
+carregaTudo();
+</script>
+</body>
+</html>
