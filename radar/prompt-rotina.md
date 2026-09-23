@@ -92,7 +92,13 @@ nova em formação. Contas típicas entre duas leituras consecutivas:
 | Janela | velas 1d novas | velas 4h novas |
 |---|---|---|
 | 22h (a diária acabou de fechar) | 2 | 4 |
-| 11h (mesma diária de ontem) | 1 | 3 |
+| 11h (mesma diária de ontem) | 1 | 4 |
+
+Na janela das 11h são **4** velas de 4h, não 3: a das 00:00Z que estava em
+formação às 22h (agora fechada, com números definitivos), mais 04:00Z,
+08:00Z e a nova em formação das 12:00Z. A tabela dizia 3 e o helper recusou
+o arquivo — a trava de continuidade pegou, mas o roteiro estava ensinando
+o número errado.
 
 Se a sessão pulou uma leitura, são mais. O helper recusa o arquivo se a vela
 mais antiga do lote não encostar na primeira vela reaproveitada — é essa trava
