@@ -1,220 +1,240 @@
 # Instruções da rotina (leituras das 11h e 22h)
 
 Este arquivo é o roteiro que a sessão agendada executa. Para mudar o que a
-rotina faz, edite este arquivo — não é preciso recriar o agendamento.
+rotina faz, edite este arquivo — não é preciso recriar o agendamento. O
+gatilho só diz a janela (`manha` ou `noite`) e manda ler isto. **Se o texto do
+gatilho e este arquivo divergirem, vale este arquivo**, exceto a regra
+inegociável de dados, que vale nos dois.
 
-A sessão agendada recebe apenas: a janela (`manha` ou `noite`) e a ordem de ler
-este arquivo. Tudo o mais está aqui.
+A rotina tem duas metades e as duas são obrigatórias:
 
----
-
-## Regra número um
-
-**Nunca escreva um preço, um RSI ou um sinal que não tenha saído de
-`analisar.py` rodando sobre dados baixados nesta execução.**
-
-Se a ferramenta de mercado da Crypto.com não estiver disponível, ou se as
-chamadas falharem, o resultado da rotina é uma mensagem dizendo que a coleta
-falhou. Não estime, não use preço de memória, não repita a leitura anterior.
-Um relatório inventado é pior do que relatório nenhum, porque parece verdadeiro.
-
-## Regra número dois
-
-**Nenhum dado entra em `radar/dados/` sem passar por `radar/validar.py`.**
-
-A conferência a olho — "confere se o topo está certo" — já deixou passar um
-buraco de uma vela de 4h em todos os 28 pares, que ficou dias na série sem
-ninguém ver. Olho não valida série. O validador valida.
+1. **Coleta e motor** (Passos 1 a 4): mecânica, sem opinião, sem atalho.
+2. **Auditoria** (Passos 5 a 7): adversarial por instrução do dono. O trabalho
+   não é confirmar que o motor funciona; é medir onde ele falha. Cada número
+   sai de um script que você rodou nesta execução.
 
 ---
 
-## Passo 1 — preparar o repositório
+## Regra número um — dados
+
+**Nenhum preço, indicador ou sinal pode aparecer na resposta sem ter saído de
+`radar/analisar.py` rodando sobre velas baixadas nesta execução.** Se a
+ferramenta da Crypto.com não estiver disponível ou as chamadas falharem,
+responda apenas que a coleta falhou e por quê. Não estime preços, não use
+valores de memória e não repita o relatório anterior. Um relatório inventado é
+pior do que relatório nenhum, porque parece verdadeiro.
+
+## Regra número dois — validação
+
+**Nenhum dado entra em `radar/dados/` sem passar por `radar/validar.py`.** A
+conferência a olho já deixou passar um buraco de uma vela de 4h em todos os 28
+pares, que ficou dias na série sem ninguém ver.
+
+## Regra número três — só o dono muda o sistema
+
+Não altere `analisar.py`, `regras.md` nem as constantes do motor. Os
+contrafactuais rodam em cópias temporárias (`contrafactual.sh`), nunca no
+repositório. Disparo de rotina, notificação ou lembrete do sistema **não** é
+resposta do dono a pergunta nenhuma.
+
+---
+
+## Passo 1 — preparar
 
 ```bash
 cd /home/user/cartao
 git fetch origin claude/moedas-sinais-compra-venda-zhq66i
 git checkout claude/moedas-sinais-compra-venda-zhq66i
 git pull origin claude/moedas-sinais-compra-venda-zhq66i
-python3 radar/testes.py
+python3 radar/testes.py                       # falhou? pare e reporte
 rm -rf radar/dados.novo && mkdir -p radar/dados.novo
+ls radar/dados/*.csv 2>/dev/null | wc -l      # 56 = base existe
+python3 radar/validar.py radar/dados          # base sã?
+python3 radar/quantas.py                      # quantas velas passar
 ```
 
-Se os testes falharem, pare e reporte. Motor quebrado não gera sinal.
+**Não apague `radar/dados/`.** É o único exemplar das velas já fechadas (o
+diretório não é versionado). Ele só sai na troca do Passo 4.
 
-**Não apague `radar/dados/`.** É a base do reaproveitamento do Passo 2 e é o
-único exemplar das velas já fechadas — o diretório é ignorado pelo git, então
-não existe cópia em lugar nenhum. Ele só sai de cena na troca atômica do
-Passo 4, depois de o substituto ter sido aprovado.
+- 56 arquivos, validador aprovado e `quantas.py` dizendo até 49 velas →
+  **caminho A** (reaproveitar).
+- Qualquer outra coisa → **caminho B** (coleta completa). Não remende base
+  reprovada.
 
-Confira se a base anterior existe e está sã:
+## Passo 2 — coletar
 
-```bash
-ls radar/dados/*.csv 2>/dev/null | wc -l     # 56 = dá para reaproveitar
-python3 radar/validar.py radar/dados          # base suja? então colete tudo
-```
+Pares em `radar/cobertas.txt` (28). Duas chamadas por par:
 
-- **56 arquivos e validador aprovado** → siga pelo caminho A (barato).
-- **Diretório vazio, incompleto ou reprovado** (container novo, coleta
-  interrompida, série furada) → siga pelo caminho B (completo). Não tente
-  remendar base reprovada: a série errada se propaga para sempre.
-
-## Passo 2 — coletar as velas
-
-Os pares estão em `radar/cobertas.txt` (um por linha). São 28.
-
-Duas chamadas por par:
-
-- `get_candlestick(instrument_name="<PAR>", timeframe="1D")` — **`1D` maiúsculo**.
+- `get_candlestick(instrument_name="<PAR>", timeframe="1D")` — `1D` maiúsculo.
 - `get_candlestick(instrument_name="<PAR>", timeframe="4h")` — minúsculo.
 
-Cada resposta traz 50 velas, da mais nova para a mais antiga. A primeira está
-**em formação** (não fechou) e serve só para o preço "Agora" — o motor não a
-usa em indicador nenhum.
+Cada resposta traz 50 velas, da mais nova para a mais antiga; a primeira está
+em formação. **Duas chamadas por vez, nunca seis** — seis respostas em paralelo
+estouram o contexto no meio da coleta.
 
-**Duas chamadas por vez, não seis.** Cada resposta tem ~4 KB; disparar seis em
-paralelo estoura o contexto no meio da coleta e obriga a recomeçar.
+Anote o horário de Brasília em que a coleta começou. Ele vai na procedência.
 
-### Caminho A — reaproveitando a base anterior (padrão)
-
-Grave em CSV sem cabeçalho (`timestamp,open,high,low,close,volume_usd`), uma
-vela por linha, da mais nova para a mais antiga. Use o helper:
+### Caminho A — reaproveitar (padrão)
 
 ```bash
 . radar/velas.sh
-v1 BTC_USDT "<velas 1d que mudaram, da mais nova para a mais antiga>"
-v4 BTC_USDT "<velas 4h que mudaram, da mais nova para a mais antiga>"
+v1 BTC_USDT "<linha mais nova>" "<seguinte>" ...
+v4 BTC_USDT "<linha mais nova>" "<seguinte>" ...
 ```
 
-**Passe todas as velas que mudaram desde a leitura anterior**: a que estava em
-formação (agora fechada, com números definitivos), as que fecharam depois, e a
-nova em formação. Contas típicas entre duas leituras consecutivas:
+Linha: `timestamp,open,high,low,close,volume_usd`, da mais nova para a mais
+antiga, números **exatamente** como a fonte devolve.
 
-| Janela | velas 1d novas | velas 4h novas |
-|---|---|---|
-| 22h (a diária acabou de fechar) | 2 | 4 |
-| 11h (mesma diária de ontem) | 1 | 4 |
+**Quantas velas passar: o número que `quantas.py` imprimiu**, não uma tabela
+decorada. A conta é: a vela que estava em formação na base (agora fechada) +
+as que fecharam depois + a nova em formação. Leitura extra no meio do dia muda
+a conta da leitura seguinte; é por isso que a tabela fixa antiga errou.
 
-Na janela das 11h são **4** velas de 4h, não 3: a das 00:00Z que estava em
-formação às 22h (agora fechada, com números definitivos), mais 04:00Z,
-08:00Z e a nova em formação das 12:00Z. A tabela dizia 3 e o helper recusou
-o arquivo — a trava de continuidade pegou, mas o roteiro estava ensinando
-o número errado.
+Volume zero: a fonte às vezes devolve `0E-7` ou `0E-8`. Grave no formato que o
+arquivo base do mesmo par já usa (ex.: ASTR usa `0.0000000`). Não é arredondar,
+é a mesma grandeza na grafia da série.
 
-Se a sessão pulou uma leitura, são mais. O helper recusa o arquivo se a vela
-mais antiga do lote não encostar na primeira vela reaproveitada — é essa trava
-que impede o buraco silencioso. Se ele reclamar, **passe mais velas**; nunca
-force.
+Se o helper recusar por continuidade, **passe mais velas**; nunca force.
 
 ### Caminho B — coleta completa
 
 Grave as 50 linhas de cada resposta em `radar/dados.novo/<PAR>_<1d|4h>.csv`.
-O motor também aceita o JSON bruto (`<PAR>_1d.json`), mas 56 JSON de 50 velas
-não cabem no contexto de uma sessão: use CSV.
+Use CSV, não JSON: 56 JSON de 50 velas não cabem no contexto.
 
-Em qualquer caminho: **transporte os números sem tocá-los.** Não reordene, não
-arredonde, não remova campo, não recalcule nada. O motor faz a matemática.
+Nos dois caminhos: não reordene, não arredonde, não recalcule. Par que falhar,
+tente uma vez mais; falhou de novo, siga — o relatório lista a falha.
 
-Se um par falhar, tente uma vez mais. Se falhar de novo, siga em frente — o
-relatório lista a falha sozinho.
-
-## Passo 3 — validar antes de trocar
+## Passo 3 — validar
 
 ```bash
-python3 radar/validar.py radar/dados.novo \
-  --topo-1d <timestamp da vela 1d em formação> \
-  --topo-4h <timestamp da vela 4h em formação>
+python3 radar/validar.py radar/dados.novo --topo-1d <topo 1d> --topo-4h <topo 4h>
 ```
 
-O validador confere: 56 arquivos, um por par e prazo; 50 linhas cada; 6 campos
-por linha; série contígua sem buraco nem repetição; OHLC coerente (`high` é o
-maior, `low` é o menor — pega dígito trocado no transporte); topo igual em
-todos os arquivos do mesmo prazo.
-
-**Reprovou, não troca.** Conserte os arquivos acusados e rode de novo.
+Os topos são os que `quantas.py` imprimiu, conferidos contra a primeira linha
+da resposta da fonte. **Reprovou, não troca.** Conserte o que foi acusado e
+rode de novo.
 
 ## Passo 4 — trocar e rodar o motor
-
-Só depois de `OK`:
 
 ```bash
 rm -rf radar/dados.antigo && mv radar/dados radar/dados.antigo \
   && mv radar/dados.novo radar/dados
-
-python3 radar/analisar.py --dir radar/dados --janela <manha|noite> \
-  --saida radar/relatorios/$(TZ=America/Sao_Paulo date +%Y-%m-%d)-<manha|noite>.md
-
+python3 radar/analisar.py --dir radar/dados --janela <J> --saida radar/relatorios/<ARQ>
+python3 radar/fonte.py radar/dados.antigo radar/dados   # guarde a saída (item 7)
 rm -rf radar/dados.antigo
 ```
 
-A data do arquivo é a de **Brasília**, nunca a UTC — depois das 21h em Brasília
-já é o dia seguinte em UTC e o relatório sairia com a data errada.
+Escolha de `<J>` e `<ARQ>` (data sempre de **Brasília**:
+`TZ=America/Sao_Paulo date +%Y-%m-%d`):
 
-Se já existir relatório dessa data e janela, não sobrescreva calado: ou é
-re-execução da mesma leitura (diga isso na entrega) ou a data está errada.
+| Situação | `--janela` | arquivo |
+|---|---|---|
+| gatilho das 11h | `manha` | `AAAA-MM-DD-manha.md` |
+| gatilho das 22h | `noite` | `AAAA-MM-DD-noite.md` |
+| pedido avulso, vela diária fechada igual à da última leitura | `manha` | `AAAA-MM-DD-extra-HHMM.md` |
+| pedido avulso logo após o fechamento diário (21h BRT) | `noite` | `AAAA-MM-DD-extra-HHMM.md` |
 
-## Passo 5 — entregar o relatório
+Em leitura extra com `--janela manha` o cabeçalho do motor diz "Leitura das
+11h" mesmo que não sejam 11h. Não edite o motor; diga isso na primeira linha
+do apêndice (Pergunta 16).
 
-Responda com o conteúdo do relatório, sem enfeitar e sem opinião própria sobre
-nenhuma moeda. O motor decide os sinais; você não os comenta na tabela.
+Se o arquivo já existir, não sobrescreva calado: ou é re-execução (diga) ou a
+data está errada.
 
-## Passo 6 — a leitura crítica
+## Passo 5 — auditoria mecânica
 
-Esta é a parte que dá valor à rotina, e ela é **adversarial por instrução do
-dono**: o trabalho não é confirmar que o motor funciona, é achar onde ele
-falha. Abra o apêndice pelo problema mais grave que você mediu **nesta**
-execução, não pelo de ontem.
-
-Nada aqui pode ser estimado. Cada número sai de um comando que você rodou.
-
-1. **Contrafactual do filtro de regime.** Gere duas cópias do motor no
-   diretório de rascunho — uma com `pc(1, "BTC em regime de alta")` trocado por
-   `pc(0, ...)`, outra com `definir_regime()` retornando `"baixa"` — rode as
-   duas sobre as mesmas velas e compare a contagem de COMPRA. Histórico até
-   aqui: 13/09n 7→1, 15/09n 4→4, 16/09m 2→0, 16/09n 5→2, 17/09m 3→1,
-   17/09n 15→6, 18/09m 1→0, 18/09n 21→21, 19/09m 10→10, 19/09n 24→24.
-   **Nunca aplique esses patches no repositório.**
-2. **Desempenho por grupo na janela.** Compare os preços "Agora" deste
-   relatório com os do anterior, agrupados por sinal (COMPRA, VENDA, NEUTRO,
-   BLOQUEADO) e contra o painel inteiro. O grupo BLOQUEADO é o teste do portão
-   de entrada: se ele vencer o painel, o portão está recusando os melhores.
-3. **Desempenho em 24 horas.** Mesma conta contra o relatório da mesma janela
-   do dia anterior — é o prazo em que o sinal de fato viveria.
-4. **Série composta.** Encadeie o retorno de cada grupo desde o início e diga
-   se COMPRA está à frente ou atrás do painel. Se o número contradisser algo
-   que você afirmou antes, diga isso com o mesmo destaque com que afirmou.
-5. **Contaminação por vela morta.** Liste os pares cuja vela "Agora" teve
-   volume zero e marque quais viraram sinal. Vela sem negócio produz deriva
-   0,00 ATR, e deriva zero passa no portão de entrada automaticamente.
-6. **Piso de liquidez.** Quantos sinais estão abaixo de US$ 50.000/dia.
-7. **Entradas na borda.** Sinais que nasceram a menos de 1 ponto do teto de
-   RSI, ou colados no limite de deriva. O motor não registra isso sozinho.
-8. **Placar em R.** 1R = `fechamento − stop`, nunca `entrada − stop`. Diga a
-   concentração por par. Lotes de 20+ entradas simultâneas **não entram** no
-   placar sem o dono mandar — eles medem o mercado, não o motor.
-9. **Contraprova.** Se o motor acertou algo que você vinha criticando,
-   registre com o mesmo peso. Crítica que só encontra defeito é torcida.
-10. **Perguntas em aberto.** Repita a lista com o contador incrementado.
-    Nenhuma delas é implementada sem resposta do dono.
-
-## Passo 7 — commit
+Rode tudo. Cole no apêndice só o que os scripts imprimiram.
 
 ```bash
-git add radar/relatorios && git commit && \
+python3 radar/auditar.py --janela <J>          # marcas por sinal + sobrevivência
+bash radar/contrafactual.sh <J>                # regime e teto de RSI
+cd radar/relatorios
+python3 ../comparar.py <anterior>.md <ARQ>     # janela: por grupo + stops
+python3 ../comparar.py <mesma janela ontem>.md <ARQ>   # 24h (só nas agendadas)
+cd ../..
+```
+
+- **`<anterior>`** = o relatório imediatamente anterior, extra incluído.
+- **Placar**: só leituras agendadas (manhã e noite) entram em
+  `radar/placar.csv`. Acrescente uma linha `seq` (anterior agendada → esta) e
+  uma `24h` (mesma janela de ontem → esta) com painel, COMPRA do relatório de
+  origem e `n`. Depois rode `python3 radar/comparar.py --serie`. Leitura extra
+  é comparada, mas não entra no placar — senão a série conta a mesma janela
+  duas vezes.
+- **Se um script falhar**, diga qual e por quê no apêndice. Não substitua a
+  saída dele por conta de cabeça.
+
+## Passo 6 — escrever o apêndice do relatório
+
+Acrescente ao relatório gerado, nesta ordem:
+
+1. **O problema mais grave medido nesta execução.** Não o de ontem. Critério:
+   o defeito que mais sinais contamina ou que mais custou no placar. Diga o
+   número e o par.
+2. **Marcas do auditor.** Contagem por marca e os pares. Vela MORTA com COMPRA
+   é o primeiro a citar: a deriva 0,00 passa no portão sozinha.
+3. **Stops.** Pares COMPRA nos dois relatórios cujo stop desceu (saída de
+   `comparar.py`). Stop que desce com o preço não protege quem já entrou
+   (Pergunta 20).
+4. **Janela e 24h.** COMPRA contra o painel e contra os bloqueados. Se o grupo
+   bloqueado vencer o painel, o portão está recusando os melhores.
+5. **Série composta** (`--serie`): COMPRA à frente ou atrás do painel, e em
+   quantas janelas de 24h venceu.
+6. **Contrafactual.** Contagens das quatro versões e os pares que mudam.
+7. **Fonte.** Saída de `fonte.py` (Passo 4): velas fechadas que a fonte
+   devolveu diferentes do que estava na base. Par, campo e os dois valores.
+   No caminho B não há base antiga; diga que não foi medido.
+8. **Contraprova.** Onde o motor acertou algo que vinha sendo criticado, com o
+   mesmo peso. **Autocorreção**: se um número desta execução contradiz algo
+   afirmado num relatório anterior, diga qual relatório e o quê, com o mesmo
+   destaque com que foi afirmado.
+9. **Perguntas.** Atualize `radar/perguntas.md`: some 1 ao contador de cada
+   uma, troque o "Hoje:" pelo dado desta execução, e copie a lista para o
+   relatório. Pergunta nova entra no fim com "(1a)". Nenhuma é implementada.
+10. **Procedência.** Fonte, horário da coleta, base usada, velas passadas por
+    par, resultado do validador e dos testes, scripts rodados, e a frase
+    "nenhum preço, indicador ou sinal deste relatório foi estimado, lembrado
+    ou copiado de leitura anterior".
+
+O que **não** entra: opinião sobre moeda, previsão, "dá para acumular",
+lotes de 20+ COMPRA simultâneas no placar em R sem ordem do dono (Pergunta 18).
+
+## Passo 7 — responder ao dono
+
+O dono pediu modo crítico: **nenhuma resposta começa com elogio, concordância
+ou validação; toda resposta começa pelo problema mais crítico medido.** Formato:
+
+1. Primeira frase: o problema mais grave desta execução, com número.
+2. Os sinais do motor, como o motor emitiu: COMPRA, VENDA, REALIZAR PARCIAL,
+   bloqueados. Sem comentário dentro da lista.
+3. **Lista de sobrevivência** (saída de `auditar.py`), sempre com este rótulo:
+   *"não é sinal do motor; é o que sobra das COMPRA depois de descontar
+   liquidez, vela morta, dependência do regime, cruzamento contrário e bordas
+   de RSI e deriva."* Se o dono perguntar "quais as melhores para comprar", é
+   esta lista, com esse rótulo, e com o stop de cada uma — nada além.
+4. Placar em uma linha: janela, 24h e série composta.
+5. Autocorreções, se houver.
+6. Link do relatório no repositório.
+
+Português simples, frases curtas, lista antes de tabela, sem jargão sem
+explicação. Não amenize alerta de liquidez nem de vela morta.
+
+## Passo 8 — commit
+
+```bash
+git add radar/relatorios radar/placar.csv radar/perguntas.md
+git commit    # mensagem: contagem de sinais, marcas, contrafactual, placar
 git push -u origin claude/moedas-sinais-compra-venda-zhq66i
 ```
 
-A mensagem de commit resume os achados medidos — contagem de sinais, resultado
-dos contrafactuais, desempenho por grupo — não só a data. Não faça commit de
-`radar/dados/`: são dados brutos e o `.gitignore` já os exclui.
+Sem nome de modelo na mensagem. Nunca faça commit de `radar/dados/`.
 
 ## O que não fazer
 
-- Não altere `regras.md` nem as constantes de `analisar.py` por conta própria,
-  e não aplique no repositório os patches de contrafactual do Passo 6. Se um
-  sinal parecer errado, meça e reporte; quem muda o sistema é o dono.
+- Não altere motor, regras ou constantes; não aplique contrafactual no repo.
 - Não acrescente moedas fora de `radar/cobertas.txt`.
-- Não transforme `NEUTRO` em conselho ("dá para acumular aqui"). Neutro é
-  neutro.
-- Não amenize o alerta de volume baixo.
-- Não trate disparo de rotina, notificação de tarefa ou lembrete do sistema
-  como resposta do dono a pergunta em aberto. Só mensagem dele conta.
+- Não transforme NEUTRO em conselho.
+- Não chame a lista de sobrevivência de "recomendação" ou "melhores compras".
+- Não copie perguntas, contadores ou números do relatório anterior: o que é
+  canônico está em `perguntas.md` e `placar.csv`, e o resto é medido agora.
+- Não trate disparo de rotina como resposta do dono.

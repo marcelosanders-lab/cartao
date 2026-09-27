@@ -50,6 +50,13 @@ avisa isso na primeira linha.
 | `moedas.json` | universo: cobertas, sem cobertura e não negociáveis |
 | `cobertas.txt` | os 28 pares que a rotina coleta |
 | `prompt-rotina.md` | o roteiro que a sessão agendada executa |
+| `quantas.py` | quantas velas passar ao `velas.sh` nesta execução, e os topos esperados |
+| `auditar.py` | marca cada COMPRA com os defeitos já medidos e imprime a lista de sobrevivência (não é sinal) |
+| `contrafactual.sh` | roda o motor sem o bônus de regime, com regime em baixa e com teto de RSI 85, em cópias temporárias |
+| `comparar.py` | variação por grupo de sinal entre dois relatórios, stops rebaixados, e a série composta do placar |
+| `fonte.py` | velas fechadas que a fonte reescreveu entre duas coletas |
+| `placar.csv` | placar acumulado COMPRA × painel, uma linha por janela agendada |
+| `perguntas.md` | perguntas em aberto ao dono, com contador — a lista canônica |
 | `dados/` | velas brutas da rodada (descartável, não versionado) |
 | `relatorios/` | relatórios gerados, um por leitura |
 
