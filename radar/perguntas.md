@@ -58,3 +58,9 @@ Contador = número de relatórios em que a pergunta apareceu sem resposta.
     conferir as velas da Crypto.com, (b) substituir a Crypto.com nos pares
     magros, ou (c) cobrir as 14 moedas que a Crypto.com nao lista (ANKR,
     TOSHI...)? Hoje: nenhuma fonte alternativa acessivel.
+22. **(1a)** Medo e ganancia da CoinMarketCap como indicador de compra: em
+    que direcao? (a) contrario - medo extremo favorece COMPRA, ganancia
+    extrema bloqueia; (b) a favor - ganancia confirma tendencia; (c) so
+    registrar ate haver 30+ leituras para medir contra o placar. As duas
+    primeiras leituras sao opostas e nenhuma foi testada nestas moedas.
+    Hoje: indice indisponivel (rede do ambiente bloqueia a CoinMarketCap).

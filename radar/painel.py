@@ -225,18 +225,61 @@ def grafico(placar):
             '<div class="dica" hidden></div></div>')
 
 
+
+# ---------------------------- sentimento ----------------------------
+
+FAIXAS_FG = [(0, 20, "Medo extremo", "fg1"), (20, 40, "Medo", "fg2"), (40, 60, "Neutro", "fg3"),
+             (60, 80, "Ganância", "fg4"), (80, 101, "Ganância extrema", "fg5")]
+
+
+def sentimento_html():
+    caminho = os.path.join(AQUI, "sentimento.csv")
+    cab = ('<section class="senti" aria-labelledby="h-fg"><h2 id="h-fg">Medo e ganância (CoinMarketCap)</h2>')
+    rodape = ('<p class="nota">Contexto, não sinal: o índice não altera nenhuma COMPRA ou VENDA do motor. '
+              'Fica registrado a cada leitura para medir se ajuda (Pergunta 22).</p></section>')
+    linhas = list(csv.DictReader(open(caminho, encoding="utf-8"))) if os.path.exists(caminho) else []
+    if not linhas:
+        return cab + '<p class="nota"><b>Não coletado.</b> <code>sentimento.py</code> nunca rodou.</p>' + rodape
+    u = linhas[-1]
+    quando = datetime.strptime(u["coletado_utc"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+    idade = datetime.now(timezone.utc) - quando
+    hora = quando.astimezone(BRT).strftime("%d/%m %H:%M")
+    if idade > timedelta(hours=3):
+        return (cab + f'<p class="nota"><b>Não coletado nesta leitura.</b> O último registro é de {hora} '
+                '(Brasília) e não é mostrado para não passar por dado atual.</p>' + rodape)
+    if u["fonte"] == "INDISPONIVEL":
+        return (cab + f'<p class="nota"><b>Indisponível nesta leitura</b> ({hora}, Brasília). '
+                f'Motivo: <code>{e(u["motivo"][:240])}</code></p>' + rodape)
+    v = int(u["fg_valor"])
+    rot = next(r for lo, hi, r, _ in FAIXAS_FG if lo <= v < hi)
+    zonas = "".join(f'<span class="{c}" style="flex:{hi - lo if hi <= 100 else 20}"></span>'
+                    for lo, hi, _, c in FAIXAS_FG)
+    extra = ""
+    if u["btc_dom"]:
+        extra = ('<div class="faixa">'
+                 f'<div class="cx"><b>{br(float(u["btc_dom"]), 1)}%</b><span>Dominância do BTC</span></div>'
+                 f'<div class="cx"><b>{br(float(u["eth_dom"]), 1)}%</b><span>Dominância do ETH</span></div>'
+                 f'<div class="cx"><b>{br(float(u["mcap_usd"]) / 1e12, 2)} tri</b><span>Valor de mercado total, US$ '
+                 f'({br(float(u["mcap_var24h"]), 2, True)}% em 24h)</span></div>'
+                 f'<div class="cx"><b>{br(float(u["vol24h_usd"]) / 1e9, 1)} bi</b><span>Volume 24h, US$</span></div></div>')
+    return (cab + f'<div class="fg"><div class="fg-num"><b>{v}</b><span>{e(rot)}'
+            f'{" · " + e(u["fg_classe"]) if u["fg_classe"] and u["fg_classe"] != rot else ""}</span></div>'
+            f'<div class="fg-escala" role="img" aria-label="Índice {v} de 100, {e(rot)}"><div class="fg-zonas">{zonas}</div>'
+            f'<i style="left:{v}%"></i><div class="fg-rot"><span>0 medo</span><span>50</span><span>ganância 100</span></div></div></div>'
+            f'<p class="nota">Coletado às {hora} (Brasília), fonte {e(u["fonte"])}.</p>{extra}' + rodape)
+
 # ---------------------------- pagina ----------------------------
 
 CSS = """
 :root{--bg:#f2f4f3;--pn:#ffffff;--pn2:#e8eceb;--tx:#121719;--tx2:#4a5559;--mu:#65737a;--ln:#d5dcdd;
 --ac:#0e5f74;--ok:#17804a;--okb:#e3f2e9;--av:#8a5200;--avb:#fbefd9;--cr:#b3261e;--crb:#fbe5e2;
---nb:#eceff0;--s1:#2a78d6;--s2:#eb6834;color-scheme:light}
+--nb:#eceff0;--s1:#2a78d6;--s2:#eb6834;--f1:#c0392b;--f2:#e8876f;--f3:#b9bec0;--f4:#6fbf8e;--f5:#1a7f4b;color-scheme:light}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1213;--pn:#161b1d;--pn2:#1d2427;
 --tx:#e8edef;--tx2:#b6c1c5;--mu:#8e9a9f;--ln:#2a3336;--ac:#62b6cc;--ok:#52c68d;--okb:#12291d;--av:#e6a54a;
---avb:#2c2111;--cr:#ff8177;--crb:#331715;--nb:#1f2629;--s1:#3987e5;--s2:#d95926;color-scheme:dark}}
+--avb:#2c2111;--cr:#ff8177;--crb:#331715;--nb:#1f2629;--s1:#3987e5;--s2:#d95926;--f1:#e0564a;--f2:#b86a56;--f3:#5b6468;--f4:#3f9467;--f5:#52c68d;color-scheme:dark}}
 :root[data-theme="dark"]{--bg:#0e1213;--pn:#161b1d;--pn2:#1d2427;--tx:#e8edef;--tx2:#b6c1c5;--mu:#8e9a9f;
 --ln:#2a3336;--ac:#62b6cc;--ok:#52c68d;--okb:#12291d;--av:#e6a54a;--avb:#2c2111;--cr:#ff8177;--crb:#331715;
---nb:#1f2629;--s1:#3987e5;--s2:#d95926;color-scheme:dark}
+--nb:#1f2629;--s1:#3987e5;--s2:#d95926;--f1:#e0564a;--f2:#b86a56;--f3:#5b6468;--f4:#3f9467;--f5:#52c68d;color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--tx);font:15px/1.55 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
 .pagina{max-width:1120px;margin:0 auto;padding-inline:16px;padding-block:28px 56px;display:grid;gap:28px}
@@ -304,6 +347,14 @@ code{font:13px "IBM Plex Mono",monospace;background:var(--pn2);padding:0 4px;bor
 ol.perg{margin:0;padding-left:28px;display:grid;gap:8px;max-width:80ch}ol.perg li::marker{font-family:"IBM Plex Mono",monospace;color:var(--mu)}
 footer{color:var(--mu);font-size:13px;display:grid;gap:4px;border-top:1px solid var(--ln);padding-top:14px}
 a{color:var(--ac)}
+.senti{background:var(--pn);border:1px solid var(--ln);border-radius:10px;padding:16px 18px}
+.fg{display:flex;flex-wrap:wrap;gap:16px 28px;align-items:center}
+.fg-num{display:grid}.fg-num b{font:600 44px/1 "IBM Plex Mono",monospace}.fg-num span{color:var(--tx2);font-weight:600}
+.fg-escala{position:relative;flex:1 1 260px;padding-top:10px}
+.fg-zonas{display:flex;gap:2px;height:10px;border-radius:5px;overflow:hidden}
+.fg1{background:var(--f1)}.fg2{background:var(--f2)}.fg3{background:var(--f3)}.fg4{background:var(--f4)}.fg5{background:var(--f5)}
+.fg-escala i{position:absolute;top:2px;width:4px;height:26px;margin-left:-2px;background:var(--tx);border:2px solid var(--pn);border-radius:3px;box-sizing:content-box}
+.fg-rot{display:flex;justify-content:space-between;font:11px "IBM Plex Mono",monospace;color:var(--mu);margin-top:6px}
 @media (prefers-reduced-motion:no-preference){.filtros button{transition:background .15s,color .15s}}
 """
 
@@ -449,6 +500,7 @@ def main():
 {f'<p class="nota">{inline(tit.group(1))}</p>' if tit else ''}</header>
 {alerta}
 <div class="faixa">{faixa}</div>
+{sentimento_html()}
 
 <section class="sobre" aria-labelledby="h-sob"><h2 id="h-sob">Lista de sobrevivência</h2>
 <p class="nota"><b>Não é sinal do motor.</b> É o que sobra das {cont.get("compra", 0)} COMPRA depois de descontar

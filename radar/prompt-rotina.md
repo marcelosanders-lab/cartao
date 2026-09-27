@@ -24,6 +24,14 @@ responda apenas que a coleta falhou e por quê. Não estime preços, não use
 valores de memória e não repita o relatório anterior. Um relatório inventado é
 pior do que relatório nenhum, porque parece verdadeiro.
 
+**Exceção única, por ordem do dono em 27/09:** o índice de medo e ganância e
+as métricas globais da CoinMarketCap (dominância, valor de mercado, volume)
+podem aparecer, desde que tenham saído de `radar/sentimento.py` **nesta
+execução**, com fonte e horário. Nunca preço de moeda. Se o script disser
+INDISPONIVEL, a resposta diz "indisponível" e o motivo. Não procure o número
+por outro caminho, não use valor lembrado, não use busca de página (WebFetch
+devolve resumo de outro modelo, não o número).
+
 ## Regra número dois — validação
 
 **Nenhum dado entra em `radar/dados/` sem passar por `radar/validar.py`.** A
@@ -146,6 +154,7 @@ data está errada.
 Rode tudo. Cole no apêndice só o que os scripts imprimiram.
 
 ```bash
+python3 radar/sentimento.py                    # medo e ganância (CoinMarketCap) — SEMPRE
 python3 radar/auditar.py --janela <J>          # marcas por sinal + sobrevivência
 bash radar/contrafactual.sh <J>                # regime e teto de RSI
 cd radar/relatorios
@@ -183,6 +192,10 @@ Acrescente ao relatório gerado, nesta ordem:
 5. **Série composta** (`--serie`): COMPRA à frente ou atrás do painel, e em
    quantas janelas de 24h venceu.
 6. **Contrafactual.** Contagens das quatro versões e os pares que mudam.
+6b. **Medo e ganância.** Valor, classe e horário que `sentimento.py`
+   imprimiu, mais dominância do BTC e valor de mercado. Ou "indisponível" com
+   o motivo. É contexto: não muda sinal nenhum até o dono responder a
+   Pergunta 22. Não escreva "o índice indica compra" nem o contrário.
 7. **Fonte.** Saída de `fonte.py` (Passo 4): velas fechadas que a fonte
    devolveu diferentes do que estava na base. Par, campo e os dois valores.
    No caminho B não há base antiga; diga que não foi medido.
@@ -238,6 +251,8 @@ ou validação; toda resposta começa pelo problema mais crítico medido.** Form
    de RSI e deriva."* Se o dono perguntar "quais as melhores para comprar", é
    esta lista, com esse rótulo, e com o stop de cada uma — nada além.
 4. Placar em uma linha: janela, 24h e série composta.
+4b. Medo e ganância numa linha (valor, classe, horário), ou "indisponível" e
+   o motivo.
 5. Autocorreções, se houver.
 6. Link do painel (o artefato) e do relatório no repositório.
 
@@ -247,7 +262,7 @@ explicação. Não amenize alerta de liquidez nem de vela morta.
 ## Passo 8 — commit
 
 ```bash
-git add radar/relatorios radar/placar.csv radar/perguntas.md
+git add radar/relatorios radar/placar.csv radar/perguntas.md radar/sentimento.csv
 git commit    # mensagem: contagem de sinais, marcas, contrafactual, placar
 git push -u origin claude/moedas-sinais-compra-venda-zhq66i
 ```
@@ -255,6 +270,12 @@ git push -u origin claude/moedas-sinais-compra-venda-zhq66i
 Sem nome de modelo na mensagem. Nunca faça commit de `radar/dados/`.
 
 ## Fontes além da Crypto.com
+
+**CoinMarketCap (sempre, por ordem do dono):** `sentimento.py` tenta a API
+oficial se houver `CMC_PRO_API_KEY` no ambiente, depois a API pública que o
+site coinmarketcap.com/pt-br usa. Precisa de `coinmarketcap.com`,
+`api.coinmarketcap.com` e `pro-api.coinmarketcap.com` liberados na rede do
+ambiente. Em 27/09 os três estavam bloqueados e não havia chave.
 
 Estado em 27/09: a política de rede do ambiente bloqueia Binance, Coinbase,
 Kraken, OKX, Bybit, KuCoin, Gate, MEXC, CoinGecko, CryptoCompare,
