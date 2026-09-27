@@ -5,3 +5,4 @@ __pycache__/
 *.pyc
 radar/painel.html
 radar/btc-semana-mes.html
+radar/altseason.html
