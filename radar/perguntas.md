@@ -52,3 +52,9 @@ Contador = número de relatórios em que a pergunta apareceu sem resposta.
     entrada, em vez de ser recalculado a partir de cada fechamento novo? O
     relatorio deve separar "entrada nova" de "posicao aberta"? Hoje: 8 de 20
     stops rebaixados em 24 horas.
+21. **(1a)** Outra fonte de velas. Todos os sites de preço testados estao
+    bloqueados pela rede do ambiente; CoinDesk e Twelve Data existem como
+    conectores mas nao estao conectados. Se conectar um, ele deve (a) so
+    conferir as velas da Crypto.com, (b) substituir a Crypto.com nos pares
+    magros, ou (c) cobrir as 14 moedas que a Crypto.com nao lista (ANKR,
+    TOSHI...)? Hoje: nenhuma fonte alternativa acessivel.

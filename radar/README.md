@@ -56,6 +56,7 @@ avisa isso na primeira linha.
 | `comparar.py` | variação por grupo de sinal entre dois relatórios, stops rebaixados, e a série composta do placar |
 | `fonte.py` | velas fechadas que a fonte reescreveu entre duas coletas |
 | `placar.csv` | placar acumulado COMPRA × painel, uma linha por janela agendada |
+| `painel.py` | gera o painel HTML publicado como artefato a cada leitura (link fixo no roteiro, Passo 7) |
 | `perguntas.md` | perguntas em aberto ao dono, com contador — a lista canônica |
 | `dados/` | velas brutas da rodada (descartável, não versionado) |
 | `relatorios/` | relatórios gerados, um por leitura |

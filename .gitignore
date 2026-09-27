@@ -3,3 +3,4 @@ radar/dados.novo/
 radar/dados.antigo/
 __pycache__/
 *.pyc
+radar/painel.html

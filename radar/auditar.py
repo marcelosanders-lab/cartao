@@ -41,15 +41,52 @@ def topo(par, tf):
         return None
 
 
+def rodar_motor(janela):
+    """Saida JSON do analisar.py do repositorio sobre radar/dados."""
+    bruto = subprocess.run(
+        [sys.executable, os.path.join(AQUI, "analisar.py"), "--dir",
+         os.path.join(AQUI, "dados"), "--janela", janela, "--json"],
+        capture_output=True, text=True, check=True).stdout
+    return json.loads(bruto)
+
+
+def marcar(r):
+    """Marcas de defeito medido para um resultado COMPRA do motor."""
+    limite_queda = -A.FRACAO_RISCO_CONSUMIDO * A.STOP_ATR
+    marcas = []
+    t4 = topo(r["par"], "4h")
+    # sem negocio (volume zero) ou negocio unico (abertura = maxima =
+    # minima = fechamento): o "Agora" e o fechamento, deriva 0,00 exata.
+    if t4 and (float(t4[5]) == 0 or len({float(x) for x in t4[1:5]}) == 1):
+        marcas.append("MORTA")
+    if not r.get("liquidez_ok", True):
+        marcas.append("LIQ")
+    motivos = r.get("motivos", [])
+    if any("regime de alta" in m for m in motivos):
+        c = r["score_compra"] - 1
+        if not (c >= A.SCORE_COMPRA and c > r["score_venda"]):
+            marcas.append("REGIME")
+    if any("cruzamento de baixa no 4h" in m for m in motivos):
+        marcas.append("X4H-")
+    rsi = r.get("rsi") or 0
+    if rsi >= A.RSI_SOBRECOMPRA - BORDA_RSI:
+        marcas.append("RSI-BORDA")
+    der = r.get("deriva_atr")
+    if der is not None and (der >= A.ENTRADA_MAX_ATR - BORDA_DERIVA
+                            or der <= limite_queda + BORDA_DERIVA):
+        marcas.append("DER-BORDA")
+    return marcas
+
+
+def sobrevive(r, marcas):
+    return not marcas and (r.get("rsi") or 0) < RSI_SOBREVIVENCIA
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--janela", required=True, choices=["manha", "noite"])
     a = ap.parse_args()
-    bruto = subprocess.run(
-        [sys.executable, os.path.join(AQUI, "analisar.py"), "--dir",
-         os.path.join(AQUI, "dados"), "--janela", a.janela, "--json"],
-        capture_output=True, text=True, check=True).stdout
-    dados = json.loads(bruto)
+    dados = rodar_motor(a.janela)
     limite_queda = -A.FRACAO_RISCO_CONSUMIDO * A.STOP_ATR
     print(f"regime {dados['regime']}  |  portao de deriva [{limite_queda:+.2f}, "
           f"{A.ENTRADA_MAX_ATR:+.2f}] ATR  |  teto RSI {A.RSI_SOBRECOMPRA}")
@@ -58,32 +95,11 @@ def main():
     for r in dados["resultados"]:
         if not r.get("sinal", "").startswith("COMPRA"):
             continue
-        marcas = []
-        t4 = topo(r["par"], "4h")
-        # sem negocio (volume zero) ou negocio unico (abertura = maxima =
-        # minima = fechamento): o "Agora" e o fechamento, deriva 0,00 exata.
-        if t4 and (float(t4[5]) == 0 or len({float(x) for x in t4[1:5]}) == 1):
-            marcas.append("MORTA")
-        if not r.get("liquidez_ok", True):
-            marcas.append("LIQ")
-        motivos = r.get("motivos", [])
-        if any("regime de alta" in m for m in motivos):
-            c = r["score_compra"] - 1
-            if not (c >= A.SCORE_COMPRA and c > r["score_venda"]):
-                marcas.append("REGIME")
-        if any("cruzamento de baixa no 4h" in m for m in motivos):
-            marcas.append("X4H-")
-        rsi = r.get("rsi") or 0
-        if rsi >= A.RSI_SOBRECOMPRA - BORDA_RSI:
-            marcas.append("RSI-BORDA")
-        der = r.get("deriva_atr")
-        if der is not None and (der >= A.ENTRADA_MAX_ATR - BORDA_DERIVA
-                                or der <= limite_queda + BORDA_DERIVA):
-            marcas.append("DER-BORDA")
+        marcas = marcar(r)
         for m in marcas:
             contagem[m] = contagem.get(m, 0) + 1
         compras.append((r, marcas))
-        if not marcas and rsi < RSI_SOBREVIVENCIA:
+        if sobrevive(r, marcas):
             sobreviventes.append(r)
 
     print(f"\n{len(compras)} COMPRA")

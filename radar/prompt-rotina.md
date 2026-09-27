@@ -168,7 +168,9 @@ cd ../..
 
 Acrescente ao relatório gerado, nesta ordem:
 
-1. **O problema mais grave medido nesta execução.** Não o de ontem. Critério:
+1. **O problema mais grave medido nesta execução**, numa seção cujo título
+   começa exatamente com `## O problema mais grave: ` (o painel procura por
+   ela). Não o de ontem. Critério:
    o defeito que mais sinais contamina ou que mais custou no placar. Diga o
    número e o par.
 2. **Marcas do auditor.** Contagem por marca e os pares. Vela MORTA com COMPRA
@@ -199,7 +201,30 @@ Acrescente ao relatório gerado, nesta ordem:
 O que **não** entra: opinião sobre moeda, previsão, "dá para acumular",
 lotes de 20+ COMPRA simultâneas no placar em R sem ordem do dono (Pergunta 18).
 
-## Passo 7 — responder ao dono
+## Passo 7 — publicar o painel (sempre) e responder ao dono
+
+**Toda leitura é entregue como artefato, sempre no mesmo link.** Depois de o
+apêndice estar escrito e `placar.csv` e `perguntas.md` atualizados:
+
+```bash
+python3 radar/painel.py --janela <J> --relatorio radar/relatorios/<ARQ> \
+  --saida radar/painel.html
+```
+
+Depois publique `radar/painel.html` com a ferramenta Artifact, passando
+`url: https://claude.ai/artifact/384CCCBEsqaqgPDr5eTfYE` (sem `icon`, com
+`label` = data e janela, ex. "27/09 manhã"). Sem o `url` a publicação cria um
+link novo e o dono perde o que já tem aberto.
+
+- `painel.py` recusa gerar se o "Agora" do relatório não bater com o motor
+  (relatório de outra coleta). **Não contorne**: descubra qual dos dois está
+  errado.
+- Se o painel sair com o alerta "Falha da rotina", o apêndice não abriu pela
+  seção `## O problema mais grave: ...`. Conserte o relatório e gere de novo.
+- Se a publicação falhar, diga isso na resposta e entregue o relatório em
+  texto. Não finja que o link foi atualizado.
+
+Resposta ao dono:
 
 O dono pediu modo crítico: **nenhuma resposta começa com elogio, concordância
 ou validação; toda resposta começa pelo problema mais crítico medido.** Formato:
@@ -214,7 +239,7 @@ ou validação; toda resposta começa pelo problema mais crítico medido.** Form
    esta lista, com esse rótulo, e com o stop de cada uma — nada além.
 4. Placar em uma linha: janela, 24h e série composta.
 5. Autocorreções, se houver.
-6. Link do relatório no repositório.
+6. Link do painel (o artefato) e do relatório no repositório.
 
 Português simples, frases curtas, lista antes de tabela, sem jargão sem
 explicação. Não amenize alerta de liquidez nem de vela morta.
@@ -228,6 +253,22 @@ git push -u origin claude/moedas-sinais-compra-venda-zhq66i
 ```
 
 Sem nome de modelo na mensagem. Nunca faça commit de `radar/dados/`.
+
+## Fontes além da Crypto.com
+
+Estado em 27/09: a política de rede do ambiente bloqueia Binance, Coinbase,
+Kraken, OKX, Bybit, KuCoin, Gate, MEXC, CoinGecko, CryptoCompare,
+CoinMarketCap, TradingView, DefiLlama e alternative.me, inclusive pela busca de
+páginas. Conectores com dado de vela existem no diretório (CoinDesk, Twelve
+Data) mas não estão conectados.
+
+A cada leitura, veja se apareceram ferramentas de vela novas nesta sessão (ex.
+`fetch_spot_ohlcv`). Se aparecerem, **não troque a fonte do motor**: isso é
+decisão do dono (Pergunta 21). Pode usá-las só para conferir, no apêndice, as
+velas que `fonte.py` acusou como reescritas.
+
+Busca de página (WebFetch) nunca serve como fonte de preço: devolve um resumo
+feito por outro modelo, não o número transportado.
 
 ## O que não fazer
 
