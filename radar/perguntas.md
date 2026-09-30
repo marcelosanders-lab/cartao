@@ -8,80 +8,78 @@ Nenhuma é implementada sem resposta do dono, dada em mensagem dele. Disparo de
 rotina, notificação ou lembrete não conta como resposta.
 
 Contador = número de relatórios em que a pergunta apareceu sem resposta.
-Última atualização: 28/09 22h.
+Última atualização: 29/09 11h.
 
-1. **(37a)** Reancorar stop e deriva em referencia mais antiga que o
-    fechamento anterior. Hoje (28/09 22h): as 22h a deriva e medida contra
-    a vela que acabou de fechar, entao todo mundo passa (25 de 28). Na
-    janela 11h→22h os 10 bloqueados das 11h fizeram +0,66%, as 8 COMPRA
-    -0,03%. LINK, bloqueado as 11h por "preco ja correu", subiu +7,52% -
-    quinta leitura seguida em que esse bloqueio cai sobre quem sobe.
-2. **(34a, COM CONTRAPROVA)** Consertar ou remover o filtro de regime do BTC
-   (`analisar.py:309-310`). Hoje: 25→17 sem o bonus. O proprio BTC e NEUTRO
-   (5/2) e continua dando o ponto de "regime de alta" aos outros 27. O grupo
-   REGIME das 11h (ETH, SOL, AR, AIOZ) fez -0,81%, o painel -0,12%.
-3. **(31a)** Suprimir o sinal, e nao so avisar, quando a vela diaria tiver
-   volume abaixo do piso. Hoje: 13 de 25 COMPRA.
-4. **(33a)** A leitura das 11h deve considerar a vela em formacao?
-5. **(32a)** Exigir volume minimo nas velas do cruzamento antes de emitir
+1. **(38a)** Reancorar stop e deriva em referencia mais antiga que o
+    fechamento anterior. Hoje (29/09 11h): das 25 COMPRA das 22h, as 10 que
+    subiram +6,06% viraram "preco ja correu"; as 15 que continuam COMPRA
+    fizeram -0,16%. Sexta leitura seguida em que o bloqueio cai sobre quem
+    sobe. SOL passa com deriva +0,30 ATR (no limite); ETH, com +0,32, e
+    barrado.
+2. **(35a, COM CONTRAPROVA)** Consertar ou remover o filtro de regime do BTC
+   (`analisar.py:309-310`). Hoje: 15→10 sem o bonus; o BTC segue NEUTRO
+   (5/2). O grupo REGIME das 22h fez +1,00%, o painel +2,17%.
+3. **(32a)** Suprimir o sinal, e nao so avisar, quando a vela diaria tiver
+   volume abaixo do piso. Hoje: 8 de 15 COMPRA.
+4. **(34a)** A leitura das 11h deve considerar a vela em formacao?
+5. **(33a)** Exigir volume minimo nas velas do cruzamento antes de emitir
    "COMPRA (gatilho 4h)" (`analisar.py:334`).
-6. **(31a)** Marcar, ou suprimir, os pares cujo "Agora" ou fechamento vem de
-    vela sem negocio ou de negocio isolado. Hoje (28/09 22h): 8 COMPRA com
-    marca MORTA (PENDLE, IMX, DYDX, AR, SUPER, LPT, PENGU, AIOZ). DYDX teve
-    as velas 4h das 16:00 e 20:00 sem negocio e fechou o dia no preco do
-    ultimo negocio das 12:00.
-7. **(28a)** O que fazer quando a sessao fica ociosa e a rotina dispara sem
-   execucao. Hoje: a rotina das 22h rodou no horario (disparo 22:03).
-8. **(25a)** Marcar quando o portao ignora um cruzamento de 4h contrario ao
-   sinal. Hoje (28/09 22h): 4 das 25 COMPRA com cruzamento de baixa no 4h
-   (SOL, AAVE, LPT, AIOZ).
-9. **(23a)** Marcar quando uma COMPRA nasce colada ao proprio limite de
-    deriva. Hoje (28/09 22h): nenhuma; a mais proxima e SEI em -0,31 ATR.
-10. **(22a)** Marcar quando uma COMPRA nasce perto do teto de sobrecompra.
-    Hoje: SUPER com RSI 78 (no teto exato), SEI 77, PYTH 76.
-11. **(19a)** Separar "preco ja correu" de "preco chegou ao alvo".
-12. **(18a)** O bloqueio "risco ja consumido" deveria olhar o R:R antes de
-    recusar? Hoje: os 9 "risco ja consumido" das 11h fizeram -0,10% ate as
-    22h, as COMPRA -0,03% - empate.
-13. **(15a)** Medir o teto de sobrecompra toda janela. Serie: 3, 0, 1, 0, 3,
-    2, 4, 4, 2, 2, 4, 4, **0**. Na janela 11h→22h os 3 barrados das 11h que
-    entrariam com teto 85 (LTC, PYTH, SEI) fizeram -0,59% contra -0,03% das
-    COMPRA: o teto evitou 0,56 pp.
-14. **(13a)** O "Agora" deve vir da serie de 4h ou da diaria em formacao?
-15. **(13a)** A fonte devolve valores diferentes para a mesma vela fechada.
+6. **(32a)** Marcar, ou suprimir, os pares cujo "Agora" ou fechamento vem de
+    vela sem negocio ou de negocio isolado. Hoje (29/09 11h): 4 COMPRA com
+    marca MORTA (AR, LPT, AIOZ, ASTR). AIOZ: o dia inteiro e um negocio de
+    US$ 20,71; velas 4h das 04:00, 08:00 e 12:00 sem negocio.
+7. **(29a)** O que fazer quando a sessao fica ociosa e a rotina dispara sem
+   execucao. Hoje: rodou (disparo 11:10), mas o conector da Crypto.com pediu
+   novo login duas vezes no meio da coleta; completei pela segunda instancia
+   do mesmo conector.
+8. **(26a)** Marcar quando o portao ignora um cruzamento de 4h contrario ao
+   sinal. Hoje (29/09 11h): 5 das 15 COMPRA (LTC, NEAR, JUP, ONDO, RENDER).
+9. **(24a)** Marcar quando uma COMPRA nasce colada ao proprio limite de
+    deriva. Hoje (29/09 11h): SOL em +0,30 ATR, no limite exato.
+10. **(23a)** Marcar quando uma COMPRA nasce perto do teto de sobrecompra.
+    Hoje: SEI com RSI 77, PYTH 76.
+11. **(20a)** Separar "preco ja correu" de "preco chegou ao alvo".
+12. **(19a)** O bloqueio "risco ja consumido" deveria olhar o R:R antes de
+    recusar? Hoje: nenhum bloqueio desse tipo.
+13. **(16a)** Medir o teto de sobrecompra toda janela. Serie: 3, 0, 1, 0, 3,
+    2, 4, 4, 2, 2, 4, 4, 0, **0**. Nas 22h nao havia par barrado pelo teto;
+    nada a medir nesta janela.
+14. **(14a)** O "Agora" deve vir da serie de 4h ou da diaria em formacao?
+15. **(14a)** A fonte devolve valores diferentes para a mesma vela fechada.
     Aceitar como ruido ou cruzar com outra fonte? Hoje: `fonte.py` de novo
-    "nenhuma vela fechada divergente", e de novo isso nao prova nada. Nesta
-    coleta a fonte trouxe BTC 4h 24/09 16:00 com fechamento 84406,44 (base
-    84418,23), BTC 4h 22/09 00:00 com outro volume, ETH 4h 24/09 16:00 com
-    2696,50 (base 2695,89); e SOL 4h 22/09 16:00 voltou a 118,21 depois de
-    vir 118,26 as 11h. Duas versoes alternando.
-16. **(12a)** Leituras fora de horario: janela `extra` com cabecalho honesto,
-    ou proibir? E o "20" chumbado em `analisar.py:444`. Hoje: o aviso diz
-    "25 de 28 pares deram COMPRA" e na frase seguinte "Comprar os 20" - o
-    numero errado esta impresso no relatorio.
-17. **(11a)** Marcar no relatorio das 11h quais COMPRA sao residuo da leitura
-    das 22h. Hoje: leitura das 22h, nao se aplica.
-18. **(11a, PRAZO VENCIDO)** Guardar as velas de entrada de cada lote fora da
+    "nenhuma vela fechada divergente". Na resposta desta coleta: SOL 4h
+    22/09 16:00 voltou a 118,26 (base 118,21); ETH 4h 24/09 16:00 2696,50
+    (base 2695,89); e tres velas que ontem as 22h vieram diferentes voltaram
+    ao valor da base: BTC 4h 24/09 16:00 (84418,23), LTC 4h 24/09 16:00
+    (71,403), SUI 1d 30/08 (0,71134). A fonte alterna entre duas versoes a
+    cada chamada.
+16. **(13a)** Leituras fora de horario: janela `extra` com cabecalho honesto,
+    ou proibir? E o "20" chumbado em `analisar.py:444`. Hoje: 15 COMPRA, o
+    aviso nao apareceu.
+17. **(12a)** Marcar no relatorio das 11h quais COMPRA sao residuo da leitura
+    das 22h. Hoje: as 15 sao residuo; nenhuma nova.
+18. **(12a, PRAZO VENCIDO)** Guardar as velas de entrada de cada lote fora da
     janela rolante de 50. O placar em R esta congelado.
-19. **(7a)** O cruzamento de alta no 4h deve ser dispensado do portao de
+19. **(8a)** O cruzamento de alta no 4h deve ser dispensado do portao de
     deriva, ou medido contra outra referencia? Deve existir uma regra de
     tendencia diaria antes de aceitar qualquer COMPRA?
-20. **(6a)** O stop de uma posicao ja aberta deve ficar fixo no valor da
+20. **(7a)** O stop de uma posicao ja aberta deve ficar fixo no valor da
     entrada, em vez de ser recalculado a partir de cada fechamento novo? O
-    relatorio deve separar "entrada nova" de "posicao aberta"? Hoje (28/09
-    22h): 4 das 21 COMPRA das 22h de ontem fecharam o dia abaixo da propria
-    invalidacao (DYDX, JUP, ONDO, PENDLE) e as 4 voltaram a ser COMPRA, com
-    stop 9,5% a 14,9% mais baixo. Em 24h, 17 de 19 stops rebaixados.
-21. **(6a)** Outra fonte de velas. Todos os sites de preço testados estao
+    relatorio deve separar "entrada nova" de "posicao aberta"? Hoje (29/09
+    11h): contra as 22h nenhum stop mudou (mesma vela diaria); em 24h, 5 de
+    5 rebaixados. JUP, ONDO e PENDLE seguem COMPRA depois de fecharem ontem
+    abaixo da propria invalidacao.
+21. **(7a)** Outra fonte de velas. Todos os sites de preço testados estao
     bloqueados pela rede do ambiente; CoinDesk e Twelve Data existem como
     conectores mas nao estao conectados. Se conectar um, ele deve (a) so
     conferir as velas da Crypto.com, (b) substituir a Crypto.com nos pares
     magros, ou (c) cobrir as 14 moedas que a Crypto.com nao lista (ANKR,
-    TOSHI...)? Hoje: nenhuma fonte alternativa acessivel.
-22. **(6a)** Medo e ganancia da CoinMarketCap como indicador de compra: em
+    TOSHI...)? Hoje: nenhuma fonte alternativa; a segunda instancia usada
+    na coleta e o mesmo conector da Crypto.com.
+22. **(7a)** Medo e ganancia da CoinMarketCap como indicador de compra: em
     que direcao? (a) contrario - medo extremo favorece COMPRA, ganancia
     extrema bloqueia; (b) a favor - ganancia confirma tendencia; (c) so
     registrar ate haver 30+ leituras para medir contra o placar. As duas
     primeiras leituras sao opostas e nenhuma foi testada nestas moedas. Hoje
-    (28/09 22h): indisponivel, 403 da rede do ambiente, sexta coleta
+    (29/09 11h): indisponivel, 403 da rede do ambiente, setima coleta
     seguida.
